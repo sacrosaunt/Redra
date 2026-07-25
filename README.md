@@ -43,7 +43,11 @@ completeness, or fitness-for-eligibility guarantee.
 The Redra application does not persist prompts, profile data, or MCP tool
 arguments. The hosted MCP receives only tool arguments, not an agent's complete
 conversation. Hosting infrastructure may retain ordinary operational metadata,
-such as IP addresses, timestamps, and request paths, in short-lived access logs.
+such as timestamps and request paths, in short-lived access logs. The hosted MCP
+also stores each client IP address with a cumulative request count for usage
+measurement and abuse prevention; it does not associate search terms or tool
+arguments with that counter. Self-hosted Redra does not enable this hosted usage
+counter.
 
 ## Option 1: hosted MCP and dataset (recommended)
 
