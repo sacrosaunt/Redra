@@ -115,7 +115,8 @@ the MCP only on the host loopback interface at `127.0.0.1:8000`.
 ## MCP tools
 
 - `search_settlements`: keyword and structured-filter search.
-- `get_settlement`: fetches one record and its source links.
+- `get_settlement`: fetches one record and its official source links, with agent
+  guidance to verify the complete eligibility terms when browsing is available.
 - `get_dataset_info`: reports source, license, freshness, and counts.
 
 The hosted provider also returns its cached claimable-money headline in dataset
@@ -138,6 +139,14 @@ household situation.
 
 Recalled or inferred associations are query candidates, not facts or eligibility
 decisions, and queries must not contain identifying information.
+
+For each plausible result, agents with web access are directed to inspect the
+official settlement or claim page for the class definition, qualifying dates,
+products or services, geographic limits, exclusions, proof requirements, and
+deadline. Agents should compare only confirmed terms with context the user has
+made available and ask for missing details when needed. Agents without browsing
+must say that they could not independently verify the complete terms, avoid
+guessing, and direct the user to the official link.
 
 Claim `status` defaults to `open`; pass `null` to include all claim statuses.
 Supported statuses are `open`, `closed`, `payment`, and `unknown`.
