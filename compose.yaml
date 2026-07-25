@@ -1,0 +1,22 @@
+services:
+  redra:
+    build: .
+    environment:
+      REDRA_DATABASE_PATH: /data/settlements.db
+      REDRA_HOST: 0.0.0.0
+      PORT: 8000
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - redra-data:/data
+  updater:
+    build: .
+    command: ["dataset", "watch", "--interval-hours", "24"]
+    environment:
+      REDRA_DATABASE_PATH: /data/settlements.db
+    restart: unless-stopped
+    volumes:
+      - redra-data:/data
+
+volumes:
+  redra-data:
