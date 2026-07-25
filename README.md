@@ -32,7 +32,7 @@ No settlement data is committed to this repository.
 
 The project currently operates this optional public service:
 
-- Hosted MCP: `https://redra-settlements-mcp.fly.dev/mcp`
+- Hosted MCP: `https://mcp.redra.ai/mcp`
 
 The dataset service behind the hosted MCP is private, has no public Fly route,
 and is reachable only by the hosted MCP over authenticated internal networking.
@@ -45,9 +45,10 @@ The Redra application does not persist prompts, profile data, or MCP tool
 arguments. The hosted MCP receives only tool arguments, not an agent's complete
 conversation. Hosting infrastructure may retain ordinary operational metadata,
 such as timestamps and request paths, in short-lived access logs. The hosted MCP
-stores each network-source IP address with a cumulative count of MCP tool calls
-for aggregate usage measurement. A network source may be shared provider
-infrastructure and is not treated as a Redra user identity or quota key. Search
+stores each network-source IP address with a cumulative count of MCP work units
+for aggregate usage measurement; items in a batch count individually. A network
+source may be shared provider infrastructure and is not treated as a Redra user
+identity or quota key. Search
 terms and tool arguments are not associated with that counter. Self-hosted Redra
 does not enable this hosted usage counter.
 
@@ -57,7 +58,7 @@ Connect a Streamable HTTP MCP client to the URL published by the Redra service,
 currently:
 
 ```text
-https://redra-settlements-mcp.fly.dev/mcp
+https://mcp.redra.ai/mcp
 ```
 
 No local process or dataset is needed.
@@ -123,8 +124,14 @@ the MCP only on the host loopback interface at `127.0.0.1:8000`.
 ## MCP tools
 
 - `search_settlements`: keyword and structured-filter search.
+- `search_settlements_batch`: runs up to 50 independent searches in one MCP call
+  without changing the logical-AND meaning of each query's keywords. Records are
+  deduplicated across queries, and `matched_query_indices` preserves every search
+  angle that found each record.
 - `get_settlement`: fetches one record and its official source links, with agent
   guidance to verify the complete eligibility terms when browsing is available.
+- `get_settlements`: fetches up to 20 finalist records together before the agent
+  composes its answer.
 - `get_dataset_info`: reports source, license, freshness, and counts.
 
 The hosted provider also returns its cached claimable-money headline in dataset
@@ -135,8 +142,16 @@ return additional provider-specific aggregate metrics in the same `extra` object
 
 ### Search behavior
 
-Every item in `keywords` is required (logical AND). Agents should make separate
-searches for unrelated companies, products, or alternative terms.
+Every item in `keywords` is required (logical AND). Agents should use independent
+query objects in `search_settlements_batch` for unrelated companies, products, or
+alternative terms. This preserves each query's meaning while avoiding a long series
+of MCP round trips.
+
+Batch search caps the unique records returned across all queries with
+`max_total_results`, which defaults to 50 and may be set as high as 100. The cap
+does not reduce the number of searches performed. Query summaries report each
+query's total match count, sampled count, returned IDs, and omitted sampled count;
+the unique records appear once in the top-level `items` list.
 
 For broad eligibility scans, the MCP directs agents to search expansively across
 plausible brands, aliases, parent companies, subsidiaries, services, purchases,
@@ -146,15 +161,26 @@ occupation, student or veteran status, parent or guardian status, and housing or
 household situation.
 
 Recalled or inferred associations are query candidates, not facts or eligibility
-decisions, and queries must not contain identifying information.
+decisions, and queries must not contain identifying information. A category-level
+or demographic association alone is not enough to call a result a match.
 
 For each plausible result, agents with web access are directed to inspect the
 official settlement or claim page for the class definition, qualifying dates,
 products or services, geographic limits, exclusions, proof requirements, and
 deadline. Agents should compare only confirmed terms with context the user has
-made available. Plausible results are presented as concise lead cards showing why
-each surfaced, confirmed matching terms, important unknowns, deadline, payout,
-proof requirement, and the official link when those fields are available.
+made available. Before composing the final answer, agents retrieve the complete
+stored record for every finalist with `get_settlement` or `get_settlements`.
+Plausible results are presented as concise lead cards showing why each surfaced,
+confirmed matching terms, important unknowns, deadline, payout, proof requirement,
+and the official link when those fields are available. Evidence strength is ranked
+before urgency, with labels such as `Notice found`, `Strong possible match`, and
+`Needs your confirmation`; imminent deadlines remain prominent.
+
+A direct notice is strong evidence but does not prove every class condition. Agents
+ask a focused non-sensitive follow-up before recommending action when one unknown
+could change the recommendation. A candidate mentioned during progress receives an
+explicit final disposition, and purely category-level or demographic candidates are
+kept out of the action list unless the user requests an exhaustive trace.
 
 Agents search and investigate before asking for more information. When
 non-sensitive answers would materially clarify a lead, they prefer the client's
@@ -214,7 +240,8 @@ spoof the address used for rate limiting.
 
 The hosted MCP instead uses bounded request bodies, a concurrency cap, a short
 bounded cache for identical normalized searches, and a centralized emergency
-ceiling on aggregate tool calls. Cache keys are per-process keyed digests and
+ceiling on aggregate work units. Batch items count individually toward that ceiling.
+Cache keys are per-process keyed digests and
 cached values contain public settlement results rather than submitted query
 arguments. The emergency ceiling is a service-wide circuit breaker, not a user
 quota. Its dataset service is not exposed to public callers and uses separate

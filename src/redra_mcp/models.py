@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -40,9 +40,7 @@ SettlementType = Literal[
 ProofRequirement = Literal["yes", "no", "optional", "unknown"]
 
 SOURCE_NAME = "SettleSignal"
-SOURCE_DATASET_URL = (
-    "https://huggingface.co/datasets/katana957/us-settlement-catalog"
-)
+SOURCE_DATASET_URL = "https://huggingface.co/datasets/katana957/us-settlement-catalog"
 SOURCE_LICENSE = "CC BY 4.0"
 SOURCE_LICENSE_URL = "https://creativecommons.org/licenses/by/4.0/"
 SOURCE_CHANGES = (
@@ -63,14 +61,47 @@ DISCLAIMER = (
 class SearchQuery(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    keywords: list[str] = Field(default_factory=list, max_length=20)
-    state: str | None = None
-    status: ClaimStatus | None = "open"
-    settlement_type: SettlementType | None = None
-    proof_required: ProofRequirement | None = None
-    deadline_after: date | None = None
-    deadline_before: date | None = None
-    limit: int = Field(default=20, ge=1, le=50)
+    keywords: list[Annotated[str, Field(min_length=1, max_length=100)]] = Field(
+        default_factory=list,
+        max_length=20,
+        description=(
+            "Terms combined with logical AND. Put unrelated companies, products, "
+            "or alternatives in separate batch query objects."
+        ),
+    )
+    state: str | None = Field(
+        default=None,
+        description="Optional two-letter US postal abbreviation.",
+    )
+    status: ClaimStatus | None = Field(
+        default="open",
+        description="Claim lifecycle; defaults to open. Use null for all statuses.",
+    )
+    settlement_type: SettlementType | None = Field(
+        default=None,
+        description=(
+            "Exact settlement taxonomy filter. Use this instead of keywords for "
+            "type concepts such as privacy, data breaches, or financial fees."
+        ),
+    )
+    proof_required: ProofRequirement | None = Field(
+        default=None,
+        description="Exact proof requirement: yes, no, optional, or unknown.",
+    )
+    deadline_after: date | None = Field(
+        default=None,
+        description="Include deadlines on or after this ISO 8601 date.",
+    )
+    deadline_before: date | None = Field(
+        default=None,
+        description="Include deadlines on or before this ISO 8601 date.",
+    )
+    limit: int = Field(
+        default=20,
+        ge=1,
+        le=50,
+        description="Maximum results for this independent query, from 1 to 50.",
+    )
 
     @field_validator("keywords")
     @classmethod

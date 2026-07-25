@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import MagicMock
 
 from redra_mcp.server import SERVER_INSTRUCTIONS, create_mcp
@@ -8,7 +9,9 @@ def test_exposed_tool_surface():
     tools = server._tool_manager.list_tools()
     assert [tool.name for tool in tools] == [
         "search_settlements",
+        "search_settlements_batch",
         "get_settlement",
+        "get_settlements",
         "get_dataset_info",
     ]
 
@@ -41,6 +44,19 @@ def test_exposed_tool_surface():
     assert "no more than" not in SERVER_INSTRUCTIONS
     assert '"Not sure" or' in SERVER_INSTRUCTIONS
     assert "Search and investigate before asking" in SERVER_INSTRUCTIONS
+    assert "Prefer search_settlements_batch" in SERVER_INSTRUCTIONS
+    assert '"Notice found"' in SERVER_INSTRUCTIONS
+    assert '"Needs your confirmation"' in SERVER_INSTRUCTIONS
+    assert "Rank evidence strength before urgency" in SERVER_INSTRUCTIONS
+    assert "Do not call a result a match merely because" in SERVER_INSTRUCTIONS
+    assert "Before including any settlement as a finalist" in SERVER_INSTRUCTIONS
+    assert "explicit final disposition" in SERVER_INSTRUCTIONS
+    assert "batch response's query_count" in SERVER_INSTRUCTIONS
+    assert "complete stored record" in SERVER_INSTRUCTIONS
+    assert "Before recommending that the user file" in SERVER_INSTRUCTIONS
+    assert "direct notice is strong evidence but not proof" in SERVER_INSTRUCTIONS
+    assert "ask a focused follow-up before recommending" in SERVER_INSTRUCTIONS
+    assert "Omit purely" in SERVER_INSTRUCTIONS
     assert "multiple queries" in search.description
     assert search.parameters["properties"]["status"]["default"] == "open"
     claim_statuses = search.parameters["properties"]["status"]["anyOf"][0]["enum"]
@@ -73,9 +89,72 @@ def test_exposed_tool_surface():
         "type": "string",
     }
 
-    detail = tools[1]
+    batch = tools[1]
+    queries = batch.parameters["properties"]["queries"]
+    assert queries["minItems"] == 1
+    assert queries["maxItems"] == 50
+    assert "Independent settlement searches" in queries["description"]
+    batch_query = batch.parameters["$defs"]["SearchQuery"]
+    assert batch_query["additionalProperties"] is False
+    assert "logical AND" in batch_query["properties"]["keywords"]["description"]
+    assert batch_query["properties"]["status"]["default"] == "open"
+    result_limit = batch.parameters["properties"]["max_total_results"]
+    assert result_limit["default"] == 50
+    assert result_limit["minimum"] == 1
+    assert result_limit["maximum"] == 100
+    assert "cross-query deduplication" in result_limit["description"]
+    assert "matched_query_indices" in batch.description
+
+    detail = tools[2]
     assert "official links" in detail.description
     assert "concise lead cards" in detail.description
     assert "confirmed terms" in detail.description
     assert "If browsing is unavailable" in detail.description
     assert "avoid guessing" in detail.description
+
+    details = tools[3]
+    ids = details.parameters["properties"]["settlement_ids"]
+    assert ids["minItems"] == 1
+    assert ids["maxItems"] == 20
+    assert "every finalist" in ids["description"]
+
+
+def test_batch_tools_validate_and_dispatch_nested_arguments():
+    service = MagicMock()
+    service.search_many.return_value = {"query_count": 1, "queries": [], "items": []}
+    service.get_many.return_value = {
+        "requested_count": 2,
+        "found_count": 0,
+        "items": [],
+        "not_found": ["one", "missing"],
+    }
+    tools = {
+        tool.name: tool
+        for tool in create_mcp(service=service)._tool_manager.list_tools()
+    }
+
+    search_result = asyncio.run(
+        tools["search_settlements_batch"].run(
+            {
+                "queries": [
+                    {
+                        "keywords": ["Fidelity"],
+                        "deadline_after": "2026-07-25",
+                    }
+                ],
+                "max_total_results": 12,
+            }
+        )
+    )
+    detail_result = asyncio.run(
+        tools["get_settlements"].run({"settlement_ids": ["one", "missing"]})
+    )
+
+    query = service.search_many.call_args.args[0][0]
+    assert query.keywords == ["Fidelity"]
+    assert query.status == "open"
+    assert query.deadline_after.isoformat() == "2026-07-25"
+    assert service.search_many.call_args.kwargs == {"max_total_results": 12}
+    service.get_many.assert_called_once_with(["one", "missing"])
+    assert search_result["query_count"] == 1
+    assert detail_result["not_found"] == ["one", "missing"]

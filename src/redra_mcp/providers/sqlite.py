@@ -109,12 +109,28 @@ class SQLiteProvider:
             disclaimer=DISCLAIMER,
         )
 
+    def search_many(self, queries: list[SearchQuery]) -> list[SearchResponse]:
+        return [self.search(query) for query in queries]
+
     def get(self, settlement_id: str) -> SettlementRecord | None:
         normalized_id = settlement_id.rstrip("/").rsplit("/", 1)[-1]
         row = self.connection.execute(
             "SELECT * FROM settlements WHERE id = ?", (normalized_id,)
         ).fetchone()
         return self._record(row) if row else None
+
+    def get_many(
+        self, settlement_ids: list[str]
+    ) -> tuple[list[SettlementRecord], list[str]]:
+        items: list[SettlementRecord] = []
+        not_found: list[str] = []
+        for settlement_id in settlement_ids:
+            record = self.get(settlement_id)
+            if record is None:
+                not_found.append(settlement_id)
+            else:
+                items.append(record)
+        return items, not_found
 
     def info(self) -> DatasetInfo:
         metadata = {
