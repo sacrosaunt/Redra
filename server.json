@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.sacrosaunt/redra",
+  "title": "Redra",
+  "description": "Search current class-action settlements and identify possible matches using structured filters.",
+  "version": "0.1.0",
+  "websiteUrl": "https://redra.ai",
+  "repository": {
+    "url": "https://github.com/sacrosaunt/Redra",
+    "source": "github"
+  },
+  "icons": [
+    {
+      "src": "https://redra.ai/favicon.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": [
+        "any"
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.redra.ai/mcp"
+    }
+  ]
+}
