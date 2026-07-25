@@ -6,7 +6,7 @@ Redra is an open-source Model Context Protocol server that searches current
 class-action settlement records. It works with any MCP client and supports two
 deployment choices:
 
-1. Use the hosted Redra MCP and hosted dataset (recommended).
+1. Use the hosted Redra MCP and dataset (recommended).
 2. Self-host both the MCP and a local SettleSignal-derived dataset.
 
 Redra identifies possible keyword matches. It does not determine legal
@@ -45,20 +45,7 @@ arguments. The hosted MCP receives only tool arguments, not an agent's complete
 conversation. Hosting infrastructure may retain ordinary operational metadata,
 such as IP addresses, timestamps, and request paths, in short-lived access logs.
 
-## Install
-
-Python 3.11 or newer is required.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-```
-
-The project pins the current stable v1 line of the official Python MCP SDK with
-`mcp>=1.27,<2`. Version 2 was still prerelease when this release was built.
-
-## Option 1: hosted MCP and hosted dataset (recommended)
+## Option 1: hosted MCP and dataset (recommended)
 
 Connect a Streamable HTTP MCP client to the URL published by the Redra service,
 currently:
@@ -70,6 +57,21 @@ https://redra-settlements-mcp.fly.dev/mcp
 No local process or dataset is needed.
 
 ## Option 2: self-hosted MCP and dataset
+
+Python 3.11 or newer is required. Clone and install Redra:
+
+```bash
+git clone https://github.com/sacrosaunt/Redra.git
+cd Redra
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+The project pins the current stable v1 line of the official Python MCP SDK with
+`mcp>=1.27,<2`. Version 2 was still prerelease when this release was built.
+
+Download the settlement dataset and start the local MCP:
 
 ```bash
 export REDRA_DATABASE_PATH="$PWD/data/settlements.db"
