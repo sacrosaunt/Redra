@@ -32,7 +32,10 @@ No settlement data is committed to this repository.
 
 The project currently operates this optional public service:
 
+- Website: `https://redra.ai/`
+- Documentation: `https://redra.ai/docs`
 - Hosted MCP: `https://mcp.redra.ai/mcp`
+- Privacy policy: `https://redra.ai/privacy`
 
 The dataset service behind the hosted MCP is private, has no public Fly route,
 and is reachable only by the hosted MCP over authenticated internal networking.
