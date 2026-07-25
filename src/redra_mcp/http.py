@@ -154,3 +154,74 @@ class ConcurrencyLimitMiddleware:
             await self.app(scope, receive, send)
         finally:
             self._release()
+
+
+class RequestBodyLimitMiddleware:
+    """Reject oversized HTTP request bodies before MCP JSON parsing."""
+
+    def __init__(self, app: Any, *, max_bytes: int):
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
+        if (
+            scope.get("type") != "http"
+            or self.max_bytes <= 0
+            or scope.get("method", "POST").upper() not in {"POST", "PUT", "PATCH"}
+        ):
+            await self.app(scope, receive, send)
+            return
+
+        for name, value in scope.get("headers", []):
+            if name.lower() == b"content-length":
+                try:
+                    if int(value) > self.max_bytes:
+                        await self._reject(send)
+                        return
+                except ValueError:
+                    pass
+
+        messages: list[dict] = []
+        size = 0
+        while True:
+            message = await receive()
+            messages.append(message)
+            if message.get("type") != "http.request":
+                break
+            size += len(message.get("body", b""))
+            if size > self.max_bytes:
+                await self._reject(send)
+                return
+            if not message.get("more_body", False):
+                break
+
+        index = 0
+
+        async def replay() -> dict:
+            nonlocal index
+            if index < len(messages):
+                message = messages[index]
+                index += 1
+                return message
+            return await receive()
+
+        await self.app(scope, replay, send)
+
+    async def _reject(self, send: Any) -> None:
+        body = json.dumps(
+            {
+                "error": "request_too_large",
+                "message": f"MCP request body exceeds {self.max_bytes} bytes.",
+            }
+        ).encode()
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 413,
+                "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"content-length", str(len(body)).encode()),
+                ],
+            }
+        )
+        await send({"type": "http.response.body", "body": body})

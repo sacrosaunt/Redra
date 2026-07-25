@@ -36,18 +36,20 @@ The project currently operates this optional public service:
 
 The dataset service behind the hosted MCP is private, has no public Fly route,
 and is reachable only by the hosted MCP over authenticated internal networking.
-The MCP currently requires no user API key. It enforces an IP-based edge rate
-limit, and availability is provided on a best-effort basis without an uptime,
+The MCP currently requires no user API key. It does not impose a per-IP quota,
+because hosted AI clients can send many unrelated users through shared network
+addresses. Availability is provided on a best-effort basis without an uptime,
 completeness, or fitness-for-eligibility guarantee.
 
 The Redra application does not persist prompts, profile data, or MCP tool
 arguments. The hosted MCP receives only tool arguments, not an agent's complete
 conversation. Hosting infrastructure may retain ordinary operational metadata,
 such as timestamps and request paths, in short-lived access logs. The hosted MCP
-also stores each client IP address with a cumulative request count for usage
-measurement and abuse prevention; it does not associate search terms or tool
-arguments with that counter. Self-hosted Redra does not enable this hosted usage
-counter.
+stores each network-source IP address with a cumulative count of MCP tool calls
+for aggregate usage measurement. A network source may be shared provider
+infrastructure and is not treated as a Redra user identity or quota key. Search
+terms and tool arguments are not associated with that counter. Self-hosted Redra
+does not enable this hosted usage counter.
 
 ## Option 1: hosted MCP and dataset (recommended)
 
@@ -196,20 +198,27 @@ An empty `applicable_states` list is treated as nationwide.
 | `REDRA_RATE_LIMIT_PER_HOUR` | Streamable HTTP requests allowed per IP; `0` disables | `0` |
 | `REDRA_TRUST_FLY_HEADERS` | Trust Fly's client-IP header | `false` |
 | `REDRA_MAX_CONCURRENT_REQUESTS` | Maximum in-flight HTTP requests; `0` disables | `0` |
+| `REDRA_MAX_REQUEST_BODY_BYTES` | Maximum Streamable HTTP request-body size; `0` disables | `1048576` |
+| `REDRA_SEARCH_CACHE_TTL_SECONDS` | In-process normalized search-cache lifetime; `0` disables | `30` |
+| `REDRA_SEARCH_CACHE_MAX_ENTRIES` | Maximum in-process search-cache entries; `0` disables | `512` |
 
-Rate limiting is disabled in the self-hosted distribution. When operating a
-public hosted MCP, set a limit such as `600` and, on Fly, set
-`REDRA_TRUST_FLY_HEADERS=true`. Also set a concurrency cap such as
-`REDRA_MAX_CONCURRENT_REQUESTS=32`. The hosted MCP applies both limits before tool
-execution. Arbitrary `X-Forwarded-For` values are never trusted. Local stdio mode
-is never rate-limited.
+Per-IP rate limiting is disabled by default. It should not be used as a per-user
+quota behind ChatGPT, Claude, or another hosted client because unrelated users may
+share provider egress addresses. Operators that understand their direct network
+topology can still enable it explicitly. Arbitrary `X-Forwarded-For` values are
+never trusted. Local stdio mode is never rate-limited.
 
 Only enable `REDRA_TRUST_FLY_HEADERS` when the process is actually behind Fly's
 trusted proxy path. Enabling it behind an arbitrary proxy can allow clients to
 spoof the address used for rate limiting.
 
-The hosted MCP applies these controls at its public edge. Its dataset service is
-not exposed to public callers and uses separate internal concurrency protection.
+The hosted MCP instead uses bounded request bodies, a concurrency cap, a short
+bounded cache for identical normalized searches, and a centralized emergency
+ceiling on aggregate tool calls. Cache keys are per-process keyed digests and
+cached values contain public settlement results rather than submitted query
+arguments. The emergency ceiling is a service-wide circuit breaker, not a user
+quota. Its dataset service is not exposed to public callers and uses separate
+internal concurrency protection.
 
 ## Privacy and safety
 

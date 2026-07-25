@@ -18,6 +18,9 @@ class Settings:
     rate_limit_per_hour: int
     trust_fly_headers: bool
     max_concurrent_requests: int
+    max_request_body_bytes: int
+    search_cache_ttl_seconds: float
+    search_cache_max_entries: int
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -35,5 +38,14 @@ class Settings:
             in {"1", "true", "yes"},
             max_concurrent_requests=int(
                 os.getenv("REDRA_MAX_CONCURRENT_REQUESTS", "0")
+            ),
+            max_request_body_bytes=int(
+                os.getenv("REDRA_MAX_REQUEST_BODY_BYTES", "1048576")
+            ),
+            search_cache_ttl_seconds=float(
+                os.getenv("REDRA_SEARCH_CACHE_TTL_SECONDS", "30")
+            ),
+            search_cache_max_entries=int(
+                os.getenv("REDRA_SEARCH_CACHE_MAX_ENTRIES", "512")
             ),
         )

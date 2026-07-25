@@ -8,7 +8,11 @@ from collections.abc import Sequence
 
 from redra_mcp.config import Settings
 from redra_mcp.dataset import DatasetImportError, update_dataset
-from redra_mcp.http import ConcurrencyLimitMiddleware, IPRateLimitMiddleware
+from redra_mcp.http import (
+    ConcurrencyLimitMiddleware,
+    IPRateLimitMiddleware,
+    RequestBodyLimitMiddleware,
+)
 from redra_mcp.providers.sqlite import SQLiteProvider
 from redra_mcp.server import create_mcp
 
@@ -54,6 +58,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                     app,
                     limit=settings.rate_limit_per_hour,
                     trust_fly_headers=settings.trust_fly_headers,
+                )
+                app = RequestBodyLimitMiddleware(
+                    app,
+                    max_bytes=settings.max_request_body_bytes,
                 )
                 uvicorn.run(app, host=settings.host, port=settings.port)
             else:

@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import asyncio
 
-from redra_mcp.http import ConcurrencyLimitMiddleware, IPRateLimitMiddleware
+from redra_mcp.http import (
+    ConcurrencyLimitMiddleware,
+    IPRateLimitMiddleware,
+    RequestBodyLimitMiddleware,
+)
 
 
 async def ok_app(scope, receive, send):
@@ -10,13 +14,18 @@ async def ok_app(scope, receive, send):
     await send({"type": "http.response.body", "body": b"ok"})
 
 
-def request(middleware, ip: str = "127.0.0.1", fly_ip: str | None = None):
+def request(
+    middleware,
+    ip: str = "127.0.0.1",
+    fly_ip: str | None = None,
+    body: bytes = b"",
+):
     messages = []
     headers = [] if fly_ip is None else [(b"fly-client-ip", fly_ip.encode())]
     scope = {"type": "http", "client": (ip, 1234), "headers": headers}
 
     async def receive():
-        return {"type": "http.request", "body": b"", "more_body": False}
+        return {"type": "http.request", "body": body, "more_body": False}
 
     async def send(message):
         messages.append(message)
@@ -45,3 +54,9 @@ def test_concurrency_limit_rejects_excess_in_flight_request():
     finally:
         limiter._release()
     assert request(limiter)[0]["status"] == 200
+
+
+def test_request_body_limit_rejects_oversized_payload():
+    limiter = RequestBodyLimitMiddleware(ok_app, max_bytes=4)
+    assert request(limiter, body=b"1234")[0]["status"] == 200
+    assert request(limiter, body=b"12345")[0]["status"] == 413

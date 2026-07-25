@@ -82,7 +82,9 @@ def create_mcp(
 ) -> FastMCP:
     active_settings = settings or Settings.from_env()
     active_service = service or RedraService(
-        SQLiteProvider(active_settings.database_path)
+        SQLiteProvider(active_settings.database_path),
+        search_cache_ttl_seconds=active_settings.search_cache_ttl_seconds,
+        search_cache_max_entries=active_settings.search_cache_max_entries,
     )
     server = FastMCP(
         "Redra",

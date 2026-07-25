@@ -7,9 +7,11 @@ from redra_mcp.config import Settings
 def test_self_hosted_rate_limit_is_disabled_by_default(monkeypatch, tmp_path):
     monkeypatch.delenv("REDRA_RATE_LIMIT_PER_HOUR", raising=False)
     monkeypatch.delenv("REDRA_MAX_CONCURRENT_REQUESTS", raising=False)
+    monkeypatch.delenv("REDRA_MAX_REQUEST_BODY_BYTES", raising=False)
     monkeypatch.setenv("REDRA_DATABASE_PATH", str(tmp_path / "settlements.db"))
     assert Settings.from_env().rate_limit_per_hour == 0
     assert Settings.from_env().max_concurrent_requests == 0
+    assert Settings.from_env().max_request_body_bytes == 1_048_576
 
 
 def test_dataset_watch_updates_immediately(monkeypatch, tmp_path):
