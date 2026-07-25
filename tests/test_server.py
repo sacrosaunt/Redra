@@ -33,6 +33,14 @@ def test_exposed_tool_surface():
     assert "If web access is unavailable" in SERVER_INSTRUCTIONS
     assert "do not guess" in SERVER_INSTRUCTIONS
     assert "user's explicit approval" in SERVER_INSTRUCTIONS
+    assert "concise lead cards" in SERVER_INSTRUCTIONS
+    assert "why it surfaced" in SERVER_INSTRUCTIONS
+    assert "native structured-question" in SERVER_INSTRUCTIONS
+    assert "otherwise ask the same questions directly in chat" in SERVER_INSTRUCTIONS
+    assert "ask focused questions" in SERVER_INSTRUCTIONS
+    assert "no more than" not in SERVER_INSTRUCTIONS
+    assert '"Not sure" or' in SERVER_INSTRUCTIONS
+    assert "Search and investigate before asking" in SERVER_INSTRUCTIONS
     assert "multiple queries" in search.description
     assert search.parameters["properties"]["status"]["default"] == "open"
     claim_statuses = search.parameters["properties"]["status"]["anyOf"][0]["enum"]
@@ -67,5 +75,7 @@ def test_exposed_tool_surface():
 
     detail = tools[1]
     assert "official links" in detail.description
+    assert "concise lead cards" in detail.description
+    assert "confirmed terms" in detail.description
     assert "If browsing is unavailable" in detail.description
     assert "avoid guessing" in detail.description

@@ -150,9 +150,19 @@ For each plausible result, agents with web access are directed to inspect the
 official settlement or claim page for the class definition, qualifying dates,
 products or services, geographic limits, exclusions, proof requirements, and
 deadline. Agents should compare only confirmed terms with context the user has
-made available and ask for missing details when needed. Agents without browsing
-must say that they could not independently verify the complete terms, avoid
-guessing, and direct the user to the official link.
+made available. Plausible results are presented as concise lead cards showing why
+each surfaced, confirmed matching terms, important unknowns, deadline, payout,
+proof requirement, and the official link when those fields are available.
+
+Agents search and investigate before asking for more information. When
+non-sensitive answers would materially clarify a lead, they prefer the client's
+native structured-question or question-card interface. Clients without that
+interface fall back to asking the same focused questions directly in chat.
+Questions should explain why the answer matters, offer a `Not sure` or `Skip`
+choice where appropriate, and never request identifying or sensitive information.
+
+Agents without browsing must say that they could not independently verify the
+complete terms, avoid guessing, and direct the user to the official link.
 
 Claim `status` defaults to `open`; pass `null` to include all claim statuses.
 Supported statuses are `open`, `closed`, `payment`, and `unknown`.
