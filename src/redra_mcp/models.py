@@ -71,7 +71,10 @@ class SearchQuery(BaseModel):
     )
     state: str | None = Field(
         default=None,
-        description="Optional two-letter US postal abbreviation.",
+        min_length=2,
+        max_length=2,
+        pattern=r"^[A-Za-z]{2}$",
+        description="Optional two-letter US postal abbreviation, such as CA.",
     )
     status: ClaimStatus | None = Field(
         default="open",

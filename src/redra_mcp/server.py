@@ -20,12 +20,16 @@ from redra_mcp.service import RedraService
 
 SERVER_INSTRUCTIONS = """
 Search current class-action settlement records and identify possible matches from
-non-sensitive keywords such as products, employers, services, notices, and states.
+focused terms such as products, employers, services, notices, and states.
 When a user requests a broad eligibility scan, search expansively instead of
-stopping after the most obvious match. Use relevant context or memory made available
-by the client to brainstorm separate queries for companies, brands, products,
-services, employers, retailers, subscriptions, financial institutions, payment
-apps, telecom providers, travel companies, fees, purchases, and known incidents.
+stopping after the most obvious match. Use relevant context available to the agent,
+including its memory and connected sources when the client supports them, to
+brainstorm separate queries for companies, brands, products, services, employers,
+retailers, subscriptions, financial institutions, payment apps, telecom providers,
+travel companies, fees, purchases, and known incidents. The agent may reason over
+rich context, but Redra needs only the narrow, non-identifying search terms derived
+from it. Never forward raw conversation history, model-memory passages, files,
+emails, transaction records, or account data to Redra.
 Also use eligibility-relevant demographic context to generate search angles, such
 as state, age group, occupation, student or veteran status, parent or guardian
 status, and housing or household situation. Translate that context into broad,
@@ -125,11 +129,15 @@ def create_mcp(
         streamable_http_path="/mcp",
     )
 
-    @server.tool(annotations=READ_ONLY_ANNOTATIONS)
+    @server.tool(
+        title="Search settlements",
+        annotations=READ_ONLY_ANNOTATIONS,
+    )
     def search_settlements(
         keywords: Annotated[
-            list[str] | None,
+            list[Annotated[str, Field(min_length=1, max_length=100)]] | None,
             Field(
+                max_length=20,
                 description=(
                     "Required AND terms for specific companies, brands, products, "
                     "employers, or incidents. Do not put a settlement-type label here "
@@ -140,8 +148,24 @@ def create_mcp(
                 )
             ),
         ] = None,
-        state: str | None = None,
-        status: ClaimStatus | None = "open",
+        state: Annotated[
+            str | None,
+            Field(
+                description="Optional two-letter US postal abbreviation, such as CA.",
+                min_length=2,
+                max_length=2,
+                pattern=r"^[A-Za-z]{2}$",
+            ),
+        ] = None,
+        status: Annotated[
+            ClaimStatus | None,
+            Field(
+                description=(
+                    "Claim lifecycle: open, closed, payment, or unknown. Defaults "
+                    "to open. Pass null to include every lifecycle status."
+                )
+            ),
+        ] = "open",
         settlement_type: Annotated[
             SettlementType | None,
             Field(
@@ -166,7 +190,14 @@ def create_mcp(
             date | None,
             Field(description="Include deadlines on or before this ISO 8601 date."),
         ] = None,
-        limit: int = 20,
+        limit: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=50,
+                description="Maximum records returned, from 1 to 50.",
+            ),
+        ] = 20,
     ) -> dict[str, Any]:
         """Search settlement records by keywords and structured filters.
 
@@ -174,12 +205,12 @@ def create_mcp(
         searches for unrelated companies, products, or alternative terms. Keywords
         should describe companies, products, services, employers, incidents, or
         notices. For a broad eligibility scan, think expansively using relevant
-        context available from the client and make multiple queries across plausible
-        brands, aliases, parent companies, subsidiaries, purchases, providers, fees,
-        incidents, and eligibility-relevant demographic angles such as age group,
-        occupation, student or veteran status, parent or guardian status, and housing
-        or household situation. Use the state filter for location. Do not invent user
-        facts; speculative associations are search candidates only. Status is the
+        context and memory available to the agent and make multiple queries across
+        plausible brands, aliases, parent companies, subsidiaries, purchases,
+        providers, fees, incidents, and eligibility-relevant demographic angles such
+        as age group, occupation, student or veteran status, parent or guardian status,
+        and housing or household situation. Use the state filter for location. Do not
+        invent user facts; speculative associations are search candidates only. Status is the
         claim lifecycle and defaults to open; pass
         null to include every claim status. Use settlement_type, not keywords, when
         the term describes the type of settlement rather than a specific entity or event.
@@ -199,7 +230,10 @@ def create_mcp(
             limit=limit,
         )
 
-    @server.tool(annotations=READ_ONLY_ANNOTATIONS)
+    @server.tool(
+        title="Search settlements in a batch",
+        annotations=READ_ONLY_ANNOTATIONS,
+    )
     def search_settlements_batch(
         queries: Annotated[
             list[SearchQuery],
@@ -242,8 +276,20 @@ def create_mcp(
             max_total_results=max_total_results,
         )
 
-    @server.tool(annotations=READ_ONLY_ANNOTATIONS)
-    def get_settlement(settlement_id: str) -> dict[str, Any]:
+    @server.tool(
+        title="Get a settlement",
+        annotations=READ_ONLY_ANNOTATIONS,
+    )
+    def get_settlement(
+        settlement_id: Annotated[
+            str,
+            Field(
+                min_length=1,
+                max_length=200,
+                description="Exact settlement identifier returned by a search.",
+            ),
+        ],
+    ) -> dict[str, Any]:
         """Return one settlement and its official source links.
 
         When web access is available, use the official links to verify the complete
@@ -255,7 +301,10 @@ def create_mcp(
         """
         return active_service.get(settlement_id)
 
-    @server.tool(annotations=READ_ONLY_ANNOTATIONS)
+    @server.tool(
+        title="Get settlements",
+        annotations=READ_ONLY_ANNOTATIONS,
+    )
     def get_settlements(
         settlement_ids: Annotated[
             list[Annotated[str, Field(min_length=1, max_length=200)]],
@@ -278,7 +327,10 @@ def create_mcp(
         """
         return active_service.get_many(settlement_ids)
 
-    @server.tool(annotations=READ_ONLY_ANNOTATIONS)
+    @server.tool(
+        title="Get dataset information",
+        annotations=READ_ONLY_ANNOTATIONS,
+    )
     def get_dataset_info() -> dict[str, Any]:
         """Return source, license, freshness, counts, and hosted aggregate metrics."""
         return active_service.info()
