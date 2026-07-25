@@ -1,4 +1,4 @@
-<img src="assets/redra-icon.svg" alt="Redra" width="96">
+<img src="assets/redra-icon-white-rounded.svg" alt="Redra" width="96">
 
 # Redra MCP
 
