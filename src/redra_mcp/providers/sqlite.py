@@ -55,7 +55,7 @@ class SQLiteProvider:
             where.append("settlements_fts MATCH ?")
             params.append(fts)
             rank_column = "bm25(settlements_fts) AS rank"
-        if query.status:
+        if query.status != "all":
             where.append("s.normalized_status = ?")
             params.append(query.status)
         if query.settlement_type:

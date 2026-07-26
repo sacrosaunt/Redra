@@ -62,7 +62,11 @@ def test_exposed_tool_surface():
     assert "Do not call a result a match merely because" in SERVER_INSTRUCTIONS
     assert "Before including any settlement as a finalist" in SERVER_INSTRUCTIONS
     assert "explicit final disposition" in SERVER_INSTRUCTIONS
-    assert "batch response's query_count" in SERVER_INSTRUCTIONS
+    assert "sum executed_query_count" in SERVER_INSTRUCTIONS
+    assert "never claim that no settlement exists" in SERVER_INSTRUCTIONS
+    assert "search snippet or secondary source as confirmed" in SERVER_INSTRUCTIONS
+    assert 'say "you qualify", "likely qualify", "checks out"' in SERVER_INSTRUCTIONS
+    assert "keep status open" in SERVER_INSTRUCTIONS
     assert "complete stored record" in SERVER_INSTRUCTIONS
     assert "Before recommending that the user file" in SERVER_INSTRUCTIONS
     assert "direct notice is strong evidence but not proof" in SERVER_INSTRUCTIONS
@@ -77,8 +81,9 @@ def test_exposed_tool_surface():
     assert search.parameters["properties"]["state"]["anyOf"][0]["maxLength"] == 2
     assert search.parameters["properties"]["limit"]["minimum"] == 1
     assert search.parameters["properties"]["limit"]["maximum"] == 50
-    claim_statuses = search.parameters["properties"]["status"]["anyOf"][0]["enum"]
-    assert claim_statuses == ["open", "closed", "payment", "unknown"]
+    claim_statuses = search.parameters["properties"]["status"]["enum"]
+    assert claim_statuses == ["open", "closed", "payment", "unknown", "all"]
+    assert "anyOf" not in search.parameters["properties"]["status"]
     assert "verification_status" not in search.parameters["properties"]
     type_property = search.parameters["properties"]["settlement_type"]
     assert "Prefer this over keywords" in type_property["description"]
@@ -120,12 +125,21 @@ def test_exposed_tool_surface():
     assert batch_query["additionalProperties"] is False
     assert "logical AND" in batch_query["properties"]["keywords"]["description"]
     assert batch_query["properties"]["status"]["default"] == "open"
+    assert batch_query["properties"]["status"]["enum"] == [
+        "open",
+        "closed",
+        "payment",
+        "unknown",
+        "all",
+    ]
+    assert "anyOf" not in batch_query["properties"]["status"]
     result_limit = batch.parameters["properties"]["max_total_results"]
     assert result_limit["default"] == 50
     assert result_limit["minimum"] == 1
     assert result_limit["maximum"] == 100
     assert "cross-query deduplication" in result_limit["description"]
     assert "matched_query_indices" in batch.description
+    assert "executed_query_count" in batch.description
 
     detail = tools[2]
     assert detail.parameters["properties"]["settlement_id"]["minLength"] == 1

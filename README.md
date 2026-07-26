@@ -195,8 +195,10 @@ choice where appropriate, and never request identifying or sensitive information
 Agents without browsing must say that they could not independently verify the
 complete terms, avoid guessing, and direct the user to the official link.
 
-Claim `status` defaults to `open`; pass `null` to include all claim statuses.
-Supported statuses are `open`, `closed`, `payment`, and `unknown`.
+Claim `status` defaults to `open`. Use the explicit `all` value only when
+intentionally including non-open lifecycle states. Supported statuses are `open`,
+`closed`, `payment`, `unknown`, and `all`; `null` is rejected so clients cannot
+silently widen a current-claims search.
 
 The provider's opaque verification tier is not a search filter. It is retained in
 results as `source_verification_status` for transparency. Redra also returns

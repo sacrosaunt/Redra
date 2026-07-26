@@ -114,6 +114,7 @@ def test_batch_search_deduplicates_records_and_maps_matching_queries():
         [SearchQuery(keywords=["Alpha"]), SearchQuery(keywords=["Beta"])],
         max_total_results=2,
     )
+    assert result["executed_query_count"] == result["query_count"]
 
     assert result["query_count"] == 2
     assert result["unique_sampled_item_count"] == 3

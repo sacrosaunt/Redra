@@ -9,9 +9,9 @@ from pydantic import Field
 
 from redra_mcp.config import Settings
 from redra_mcp.models import (
-    ClaimStatus,
     ProofRequirement,
     SearchQuery,
+    SearchStatus,
     SettlementType,
 )
 from redra_mcp.providers.sqlite import SQLiteProvider
@@ -40,6 +40,9 @@ are combined with logical AND. Prefer search_settlements_batch for broad scans a
 unrelated alternatives so each independent query keeps its own meaning. Prefer broad
 recall first, then narrow and validate; never invent facts about the user or treat a
 speculative association as eligibility.
+For current eligibility scans, keep status open. Use the explicit all status only
+when the user asks to investigate non-open lifecycle states too; never widen a
+current scan merely for breadth.
 Do not send names, addresses, email addresses, account or claim numbers, health
 details, or other identifying data in any query.
 Treat every result as a lead, not a legal eligibility decision. Confirm all details
@@ -50,6 +53,10 @@ the class definition, qualifying dates, products or services, geographic limits,
 exclusions, proof requirements, and filing deadline. Compare confirmed terms with
 context the user has made available, clearly distinguish confirmed facts from
 assumptions, and ask only for details still needed to assess a possible match.
+If the linked administrator page is unavailable, try another official government,
+court, or administrator source. Never present an exact eligibility threshold taken
+only from a search snippet or secondary source as confirmed. Label it unverified,
+and do not recommend filing based on that unverified term.
 If web access is unavailable, do not guess or imply that eligibility was verified;
 say that the full terms could not be independently checked and direct the user to
 the official link. Never submit a claim or sensitive information without the
@@ -74,7 +81,11 @@ search coverage compactly instead of enumerating every unsuccessful query unless
 user asks for the search trace. If a candidate is named in a progress update, give it
 an explicit final disposition: actionable, conditional, already handled, closed, no
 current claim found, or excluded after verification. Do not leave it unexplained.
-Use the batch response's query_count when reporting search breadth; do not estimate.
+Describe a negative result as "Redra returned no current matching record" or an
+equivalent dataset-scoped statement; never claim that no settlement exists.
+When reporting search breadth, sum executed_query_count from the batch responses.
+Never describe records scanned, result counts, dataset size, or MCP call count as
+the number of searches, and never estimate it.
 Do not describe get_settlement or get_settlements as retrieving a complete class
 definition. They return Redra's complete stored record; only the official source can
 confirm the complete legal terms.
@@ -90,7 +101,9 @@ agent's context unless a non-identifying fact is needed for a new Redra search.
 Before recommending that the user file a claim, connect the material class conditions
 to known user context. A direct notice is strong evidence but not proof that every
 condition is true. If one non-sensitive unknown would materially change the
-recommendation, ask a focused follow-up before recommending action. Omit purely
+recommendation, pause and ask a focused follow-up before recommending action. Do not
+say "you qualify", "likely qualify", "checks out", or recommend filing while a
+material condition remains unknown. Omit purely
 category-level or demographic candidates from the action list unless the user asks
 for an exhaustive trace or a focused answer could make the candidate meaningful.
 
@@ -158,11 +171,12 @@ def create_mcp(
             ),
         ] = None,
         status: Annotated[
-            ClaimStatus | None,
+            SearchStatus,
             Field(
                 description=(
-                    "Claim lifecycle: open, closed, payment, or unknown. Defaults "
-                    "to open. Pass null to include every lifecycle status."
+                    "Claim lifecycle: open, closed, payment, unknown, or all. "
+                    "Defaults to open. Use all only when intentionally including "
+                    "non-open lifecycle states."
                 )
             ),
         ] = "open",
@@ -211,8 +225,8 @@ def create_mcp(
         as age group, occupation, student or veteran status, parent or guardian status,
         and housing or household situation. Use the state filter for location. Do not
         invent user facts; speculative associations are search candidates only. Status is the
-        claim lifecycle and defaults to open; pass
-        null to include every claim status. Use settlement_type, not keywords, when
+        claim lifecycle and defaults to open. Use all only for an intentional search
+        across non-open lifecycle states too. Use settlement_type, not keywords, when
         the term describes the type of settlement rather than a specific entity or event.
         Source confidence is returned as objective metadata and quality flags; do not
         exclude possible matches using the provider's verification tier. Do not send
@@ -270,6 +284,9 @@ def create_mcp(
         candidates only, not evidence that the user matches a settlement. Choose
         per-query limits based on expected noise and use max_total_results to bound
         the unique records placed in model context without reducing search breadth.
+        For current eligibility scans, omit status or set it to open; do not use all
+        merely to broaden recall. The response's executed_query_count is the number
+        of independent searches performed in this call.
         """
         return active_service.search_many(
             queries,

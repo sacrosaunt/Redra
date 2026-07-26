@@ -32,12 +32,12 @@ def test_import_and_search(tmp_path, settlesignal_payload):
         )
         assert and_match.count == 1
         and_miss = provider.search(
-            SearchQuery(keywords=["Acme", "wages"], status=None)
+            SearchQuery(keywords=["Acme", "wages"], status="all")
         )
         assert and_miss.count == 0
 
         breach_type = provider.search(
-            SearchQuery(status=None, settlement_type="data_breach_settlement")
+            SearchQuery(status="all", settlement_type="data_breach_settlement")
         )
         assert breach_type.count == 1
         assert breach_type.items[0].id == "acme-data-breach"

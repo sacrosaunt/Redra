@@ -11,6 +11,13 @@ def test_search_query_normalizes_input():
     assert query.status == "open"
 
 
+def test_search_query_requires_explicit_all_status():
+    assert SearchQuery(status="all").status == "all"
+
+    with pytest.raises(ValidationError):
+        SearchQuery(status=None)
+
+
 def test_search_query_rejects_invalid_state():
     with pytest.raises(ValidationError):
         SearchQuery(state="California")

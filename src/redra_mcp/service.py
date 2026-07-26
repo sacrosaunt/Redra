@@ -15,6 +15,7 @@ from redra_mcp.models import (
     ProofRequirement,
     SearchQuery,
     SearchResponse,
+    SearchStatus,
 )
 from redra_mcp.providers.base import SettlementProvider
 
@@ -84,7 +85,7 @@ class RedraService:
             self._search_cache[key] = SearchCacheEntry(
                 expires_at=self._clock() + self.search_cache_ttl_seconds,
                 response=response.model_copy(
-                    update={"query": SearchQuery(keywords=[], status=None)}
+                    update={"query": SearchQuery(keywords=[], status="all")}
                 ),
             )
             while len(self._search_cache) > self.search_cache_max_entries:
@@ -95,7 +96,7 @@ class RedraService:
         *,
         keywords: list[str] | None = None,
         state: str | None = None,
-        status: str | None = "open",
+        status: SearchStatus = "open",
         settlement_type: str | None = None,
         proof_required: ProofRequirement | None = None,
         deadline_after: date | None = None,
@@ -175,6 +176,7 @@ class RedraService:
         selected_id_set = set(selected_ids)
         return {
             "query_count": len(queries),
+            "executed_query_count": len(queries),
             "queries": [
                 {
                     "query_index": query_index,

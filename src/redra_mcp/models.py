@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 ClaimStatus = Literal["open", "closed", "payment", "unknown"]
+SearchStatus = Literal["open", "closed", "payment", "unknown", "all"]
 VerificationStatus = Literal[
     "administrator_verified",
     "court_verified",
@@ -76,9 +77,12 @@ class SearchQuery(BaseModel):
         pattern=r"^[A-Za-z]{2}$",
         description="Optional two-letter US postal abbreviation, such as CA.",
     )
-    status: ClaimStatus | None = Field(
+    status: SearchStatus = Field(
         default="open",
-        description="Claim lifecycle; defaults to open. Use null for all statuses.",
+        description=(
+            "Claim lifecycle; defaults to open. Use all only when intentionally "
+            "searching non-open lifecycle states as well."
+        ),
     )
     settlement_type: SettlementType | None = Field(
         default=None,
