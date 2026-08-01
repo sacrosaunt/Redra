@@ -7,24 +7,32 @@ class-action settlement records. It works with any MCP client and supports two
 deployment choices:
 
 1. Use the hosted Redra MCP and dataset (recommended).
-2. Self-host both the MCP and a local SettleSignal-derived dataset.
+2. Self-host both the MCP and a local copy of Redra's published dataset.
 
 Redra identifies possible keyword matches. It does not determine legal
 eligibility, submit claims, or provide legal advice.
 
 ## Data source and license
 
-Local mode downloads the public SettleSignal JSON feed from
-`https://settlesignal.com/data/settlements.json`. SettleSignal identifies its
-[Hugging Face dataset card](https://huggingface.co/datasets/katana957/us-settlement-catalog)
-as an official profile, and that card licenses the feed's public fields under
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Local mode downloads Redra's independently assembled publication manifest from
+`https://data.redra.ai/catalog/v1/manifest.json`. Redra collects and normalizes
+factual metadata from linked court, government, and settlement-administrator
+sources. The daily publication is split into content-addressed `open` and
+`upcoming` feeds. Every published record must have independent discovery lineage
+and Tier A or B provenance; a failed validation leaves the prior local snapshot
+untouched.
 
-Redra identifies SettleSignal, links to the source dataset and license, preserves
-each SettleSignal record URL, and states that Redra normalizes fields and adds
-derived lifecycle and quality metadata. Search results carry response-level
-attribution, and individual records carry the same attribution and change notice.
-See [NOTICE.md](NOTICE.md).
+`open` records have a currently usable filing endpoint. `upcoming` records require
+evidence of a future claim window but have no current claim form. They are exposed
+only as a watchlist and are excluded from the open count and claimable-money total.
+The normalized factual compilation is published under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Search results preserve
+official source links and carry source and change attribution. See
+[NOTICE.md](NOTICE.md).
+
+The importer retains compatibility with the former SettleSignal single-file feed
+for existing installations that explicitly set `REDRA_SETTLESIGNAL_URL`. New
+installations use the independently built Redra catalog by default.
 
 No settlement data is committed to this repository.
 
@@ -37,8 +45,10 @@ The project currently operates this optional public service:
 - Hosted MCP: `https://mcp.redra.ai/mcp`
 - Privacy policy: `https://redra.ai/privacy`
 
-The dataset service behind the hosted MCP is private, has no public Fly route,
+The operational database behind the hosted MCP is private, has no public Fly route,
 and is reachable only by the hosted MCP over authenticated internal networking.
+The same validated, read-only publication bundle used by self-hosters is available
+from `data.redra.ai`; it is not a query API and contains no user data.
 The MCP currently requires no user API key. It does not impose a per-IP quota,
 because hosted AI clients can send many unrelated users through shared network
 addresses. Availability is provided on a best-effort basis without an uptime,
@@ -138,9 +148,8 @@ the MCP only on the host loopback interface at `127.0.0.1:8000`.
 - `get_dataset_info`: reports source, license, freshness, and counts.
 
 The hosted provider also returns its cached claimable-money headline in dataset
-info. It is calculated deterministically by keeping the largest dollar amount in
-each claimable record's title or payout description, deduplicating by preferred
-official source URL, and summing the source-level maxima. Self-hosted providers may
+info. It is calculated only from records explicitly marked for inclusion in the
+claimable total. Upcoming records never contribute. Self-hosted providers may
 return additional provider-specific aggregate metrics in the same `extra` object.
 
 ### Search behavior
@@ -195,10 +204,13 @@ choice where appropriate, and never request identifying or sensitive information
 Agents without browsing must say that they could not independently verify the
 complete terms, avoid guessing, and direct the user to the official link.
 
-Claim `status` defaults to `open`. Use the explicit `all` value only when
-intentionally including non-open lifecycle states. Supported statuses are `open`,
-`closed`, `payment`, `unknown`, and `all`; `null` is rejected so clients cannot
-silently widen a current-claims search.
+Claim `status` defaults to `open`. If a broad open scan produces no credible leads
+or only weak leads, agents may run focused `upcoming` searches for the strongest
+user-specific angles. Those results must be labeled as a watchlist, not current
+matches, and must not be included in claimable counts or totals. Use `all` only
+when intentionally searching every lifecycle state. Supported statuses are `open`,
+`upcoming`, `closed`, `payment`, `unknown`, and `all`; `null` is rejected so clients
+cannot silently widen a current-claims search.
 
 The provider's opaque verification tier is not a search filter. It is retained in
 results as `source_verification_status` for transparency. Redra also returns
@@ -222,7 +234,8 @@ An empty `applicable_states` list is treated as nationwide.
 | Variable | Purpose | Default |
 | --- | --- | --- |
 | `REDRA_DATABASE_PATH` | Local SQLite database | platform data directory |
-| `REDRA_SETTLESIGNAL_URL` | Dataset feed override | SettleSignal public feed |
+| `REDRA_DATASET_URL` | Dataset manifest or compatible feed override | Redra publication manifest |
+| `REDRA_SETTLESIGNAL_URL` | Deprecated legacy feed override | unset |
 | `REDRA_REQUEST_TIMEOUT` | HTTP timeout in seconds | `20` |
 | `REDRA_HOST` | Streamable HTTP bind address | `127.0.0.1` |
 | `REDRA_PORT` / `PORT` | Streamable HTTP port | `8000` |

@@ -66,7 +66,9 @@ def test_exposed_tool_surface():
     assert "never claim that no settlement exists" in SERVER_INSTRUCTIONS
     assert "search snippet or secondary source as confirmed" in SERVER_INSTRUCTIONS
     assert 'say "you qualify", "likely qualify", "checks out"' in SERVER_INSTRUCTIONS
-    assert "keep status open" in SERVER_INSTRUCTIONS
+    assert "begin with status open" in SERVER_INSTRUCTIONS
+    assert "Upcoming — watch for the claim window" in SERVER_INSTRUCTIONS
+    assert "must never be presented as current matches" in SERVER_INSTRUCTIONS
     assert "complete stored record" in SERVER_INSTRUCTIONS
     assert "Before recommending that the user file" in SERVER_INSTRUCTIONS
     assert "direct notice is strong evidence but not proof" in SERVER_INSTRUCTIONS
@@ -82,7 +84,9 @@ def test_exposed_tool_surface():
     assert search.parameters["properties"]["limit"]["minimum"] == 1
     assert search.parameters["properties"]["limit"]["maximum"] == 50
     claim_statuses = search.parameters["properties"]["status"]["enum"]
-    assert claim_statuses == ["open", "closed", "payment", "unknown", "all"]
+    assert claim_statuses == [
+        "open", "upcoming", "closed", "payment", "unknown", "all"
+    ]
     assert "anyOf" not in search.parameters["properties"]["status"]
     assert "verification_status" not in search.parameters["properties"]
     type_property = search.parameters["properties"]["settlement_type"]
@@ -127,6 +131,7 @@ def test_exposed_tool_surface():
     assert batch_query["properties"]["status"]["default"] == "open"
     assert batch_query["properties"]["status"]["enum"] == [
         "open",
+        "upcoming",
         "closed",
         "payment",
         "unknown",

@@ -9,7 +9,7 @@ from pathlib import Path
 from redra_mcp.models import SettlementRecord
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def connect(path: Path) -> sqlite3.Connection:
@@ -28,6 +28,8 @@ def initialize_schema(connection: sqlite3.Connection) -> None:
         CREATE TABLE IF NOT EXISTS settlements (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            eligibility TEXT NOT NULL DEFAULT '',
             category TEXT NOT NULL DEFAULT '',
             settlement_type TEXT NOT NULL DEFAULT '',
             status TEXT NOT NULL,
@@ -38,12 +40,18 @@ def initialize_schema(connection: sqlite3.Connection) -> None:
             official_claim_url TEXT,
             official_settlement_url TEXT,
             estimated_payout TEXT,
+            published_amount_cents INTEGER,
             source_verification_status TEXT,
             source_checked_at TEXT,
             source_kind TEXT NOT NULL DEFAULT 'unknown',
             claimability TEXT NOT NULL DEFAULT 'unknown',
             claim_url_available INTEGER NOT NULL DEFAULT 0,
             quality_flags TEXT NOT NULL DEFAULT '[]',
+            lifecycle_stage TEXT,
+            provenance_tier TEXT,
+            independently_discovered INTEGER NOT NULL DEFAULT 0,
+            include_in_claimable_total INTEGER NOT NULL DEFAULT 0,
+            future_claim_window_evidenced INTEGER NOT NULL DEFAULT 0,
             source_url TEXT NOT NULL,
             source_name TEXT NOT NULL,
             source_license TEXT NOT NULL
@@ -59,6 +67,8 @@ def initialize_schema(connection: sqlite3.Connection) -> None:
         CREATE VIRTUAL TABLE IF NOT EXISTS settlements_fts USING fts5(
             id UNINDEXED,
             title,
+            description,
+            eligibility,
             category,
             estimated_payout,
             tokenize = 'unicode61 remove_diacritics 2'
@@ -74,12 +84,20 @@ def initialize_schema(connection: sqlite3.Connection) -> None:
         row["name"] for row in connection.execute("PRAGMA table_info(settlements)")
     }
     additions = {
+        "description": "TEXT NOT NULL DEFAULT ''",
+        "eligibility": "TEXT NOT NULL DEFAULT ''",
         "source_verification_status": "TEXT",
         "source_checked_at": "TEXT",
         "source_kind": "TEXT NOT NULL DEFAULT 'unknown'",
         "claimability": "TEXT NOT NULL DEFAULT 'unknown'",
         "claim_url_available": "INTEGER NOT NULL DEFAULT 0",
         "quality_flags": "TEXT NOT NULL DEFAULT '[]'",
+        "published_amount_cents": "INTEGER",
+        "lifecycle_stage": "TEXT",
+        "provenance_tier": "TEXT",
+        "independently_discovered": "INTEGER NOT NULL DEFAULT 0",
+        "include_in_claimable_total": "INTEGER NOT NULL DEFAULT 0",
+        "future_claim_window_evidenced": "INTEGER NOT NULL DEFAULT 0",
     }
     for name, declaration in additions.items():
         if name not in columns:
@@ -104,6 +122,35 @@ def initialize_schema(connection: sqlite3.Connection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_settlements_claimability "
         "ON settlements(claimability)"
     )
+    fts_columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(settlements_fts)")
+    }
+    if not {"description", "eligibility"} <= fts_columns:
+        connection.execute("DROP TABLE settlements_fts")
+        connection.execute(
+            """
+            CREATE VIRTUAL TABLE settlements_fts USING fts5(
+                id UNINDEXED,
+                title,
+                description,
+                eligibility,
+                category,
+                estimated_payout,
+                tokenize = 'unicode61 remove_diacritics 2'
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO settlements_fts(
+                id, title, description, eligibility, category, estimated_payout
+            )
+            SELECT id, title, description, eligibility, category,
+                   COALESCE(estimated_payout, '')
+            FROM settlements
+            """
+        )
     connection.execute(
         "INSERT OR REPLACE INTO metadata(key, value) VALUES('schema_version', ?)",
         (str(SCHEMA_VERSION),),
@@ -130,18 +177,25 @@ def replace_records(
             connection.execute(
                 """
                 INSERT INTO settlements (
-                    id, title, category, settlement_type, status,
+                    id, title, description, eligibility, category,
+                    settlement_type, status,
                     normalized_status, claim_deadline, proof_required,
                     applicable_states, official_claim_url,
                     official_settlement_url, estimated_payout,
+                    published_amount_cents,
                     source_verification_status, source_checked_at,
                     source_kind, claimability, claim_url_available,
-                    quality_flags, source_url, source_name, source_license
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    quality_flags, lifecycle_stage, provenance_tier,
+                    independently_discovered, include_in_claimable_total,
+                    future_claim_window_evidenced,
+                    source_url, source_name, source_license
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     row["id"],
                     row["title"],
+                    row["description"],
+                    row["eligibility"],
                     row["category"],
                     row["settlement_type"],
                     row["status"],
@@ -152,12 +206,18 @@ def replace_records(
                     row["official_claim_url"],
                     row["official_settlement_url"],
                     row["estimated_payout"],
+                    row["published_amount_cents"],
                     row["source_verification_status"],
                     row["source_checked_at"],
                     row["source_kind"],
                     row["claimability"],
                     int(row["claim_url_available"]),
                     json.dumps(row["quality_flags"], separators=(",", ":")),
+                    row["lifecycle_stage"],
+                    row["provenance_tier"],
+                    int(row["independently_discovered"]),
+                    int(row["include_in_claimable_total"]),
+                    int(row["future_claim_window_evidenced"]),
                     row["source_url"],
                     row["source_name"],
                     row["source_license"],
@@ -165,12 +225,15 @@ def replace_records(
             )
             connection.execute(
                 """
-                INSERT INTO settlements_fts(id, title, category, estimated_payout)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO settlements_fts(
+                    id, title, description, eligibility, category, estimated_payout
+                ) VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 (
                     row["id"],
                     row["title"],
+                    row["description"],
+                    row["eligibility"],
                     row["category"],
                     row["estimated_payout"] or "",
                 ),

@@ -6,8 +6,8 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-ClaimStatus = Literal["open", "closed", "payment", "unknown"]
-SearchStatus = Literal["open", "closed", "payment", "unknown", "all"]
+ClaimStatus = Literal["open", "upcoming", "closed", "payment", "unknown"]
+SearchStatus = Literal["open", "upcoming", "closed", "payment", "unknown", "all"]
 VerificationStatus = Literal[
     "administrator_verified",
     "court_verified",
@@ -16,7 +16,9 @@ VerificationStatus = Literal[
     "third_party_only",
 ]
 SourceKind = Literal["administrator", "court", "government", "secondary", "unknown"]
-Claimability = Literal["claim_open", "claim_closed", "automatic_payment", "unknown"]
+Claimability = Literal[
+    "claim_open", "upcoming", "claim_closed", "automatic_payment", "unknown"
+]
 QualityFlag = Literal[
     "missing_deadline",
     "missing_claim_url",
@@ -53,6 +55,18 @@ ATTRIBUTION = (
     f"{SOURCE_DATASET_URL}. Licensed under {SOURCE_LICENSE} "
     f"({SOURCE_LICENSE_URL}). {SOURCE_CHANGES}"
 )
+REDRA_SOURCE_NAME = "Redra"
+REDRA_SOURCE_DATASET_URL = "https://data.redra.ai/catalog/v1/manifest.json"
+REDRA_SOURCE_LICENSE = "CC-BY-4.0"
+REDRA_SOURCE_CHANGES = (
+    "Redra independently collects, validates, deduplicates, and normalizes factual "
+    "settlement metadata from linked court, government, and settlement-administrator "
+    "sources."
+)
+REDRA_ATTRIBUTION = (
+    "Redra independently collects and normalizes factual settlement metadata from "
+    "linked court, government, and settlement-administrator sources."
+)
 DISCLAIMER = (
     "Potential match only. Confirm eligibility, deadlines, and filing instructions "
     "with the official settlement administrator. Redra does not provide legal advice."
@@ -80,8 +94,9 @@ class SearchQuery(BaseModel):
     status: SearchStatus = Field(
         default="open",
         description=(
-            "Claim lifecycle; defaults to open. Use all only when intentionally "
-            "searching non-open lifecycle states as well."
+            "Claim lifecycle; defaults to open. Use upcoming only as an explicit "
+            "watchlist search for evidenced future claim windows, not current claims. "
+            "Use all only when intentionally searching every lifecycle state."
         ),
     )
     settlement_type: SettlementType | None = Field(
@@ -149,6 +164,8 @@ class SettlementRecord(BaseModel):
 
     id: str
     title: str
+    description: str = ""
+    eligibility: str = ""
     category: str = ""
     settlement_type: str = ""
     status: str
@@ -159,12 +176,18 @@ class SettlementRecord(BaseModel):
     official_claim_url: str | None = None
     official_settlement_url: str | None = None
     estimated_payout: str | None = None
+    published_amount_cents: int | None = None
     source_verification_status: VerificationStatus | None = None
     source_checked_at: date | None = None
     source_kind: SourceKind = "unknown"
     claimability: Claimability = "unknown"
     claim_url_available: bool = False
     quality_flags: list[QualityFlag] = Field(default_factory=list)
+    lifecycle_stage: str | None = None
+    provenance_tier: Literal["A", "B"] | None = None
+    independently_discovered: bool = False
+    include_in_claimable_total: bool = False
+    future_claim_window_evidenced: bool = False
     source_url: str
     source_name: str = SOURCE_NAME
     source_license: str = SOURCE_LICENSE
@@ -186,6 +209,7 @@ class DatasetInfo(BaseModel):
     provider: str
     record_count: int
     open_record_count: int
+    upcoming_record_count: int = 0
     dataset_generated_at: str | None = None
     dataset_modified_at: str | None = None
     imported_at: str | None = None

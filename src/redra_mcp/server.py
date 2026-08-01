@@ -40,9 +40,16 @@ are combined with logical AND. Prefer search_settlements_batch for broad scans a
 unrelated alternatives so each independent query keeps its own meaning. Prefer broad
 recall first, then narrow and validate; never invent facts about the user or treat a
 speculative association as eligibility.
-For current eligibility scans, keep status open. Use the explicit all status only
-when the user asks to investigate non-open lifecycle states too; never widen a
-current scan merely for breadth.
+For current eligibility scans, begin with status open. If a broad, well-formed open
+scan produces no credible leads or only weak leads, run focused follow-up searches
+with status upcoming for the strongest user-specific angles. Upcoming records are a
+separate watchlist: their future claim window has evidence, but they are not open for
+claims, have no current filing form, and must never be presented as current matches,
+filing opportunities, or part of a claimable count or dollar total. Label them
+"Upcoming — watch for the claim window", explain the evidence and uncertainty, and
+tell the user to verify their status again later. Do not use upcoming merely to pad a
+good open-results list. Use the explicit all status only when the user asks to
+investigate every lifecycle state; never widen a current scan with all for breadth.
 Do not send names, addresses, email addresses, account or claim numbers, health
 details, or other identifying data in any query.
 Treat every result as a lead, not a legal eligibility decision. Confirm all details
@@ -174,9 +181,10 @@ def create_mcp(
             SearchStatus,
             Field(
                 description=(
-                    "Claim lifecycle: open, closed, payment, unknown, or all. "
-                    "Defaults to open. Use all only when intentionally including "
-                    "non-open lifecycle states."
+                    "Claim lifecycle: open, upcoming, closed, payment, unknown, or "
+                    "all. Defaults to open. Use upcoming only for a clearly labeled "
+                    "watchlist after open results are weak; it is not claimable. Use "
+                    "all only when intentionally including every lifecycle state."
                 )
             ),
         ] = "open",
@@ -225,8 +233,11 @@ def create_mcp(
         as age group, occupation, student or veteran status, parent or guardian status,
         and housing or household situation. Use the state filter for location. Do not
         invent user facts; speculative associations are search candidates only. Status is the
-        claim lifecycle and defaults to open. Use all only for an intentional search
-        across non-open lifecycle states too. Use settlement_type, not keywords, when
+        claim lifecycle and defaults to open. Use upcoming only as a separate,
+        clearly labeled watchlist after a broad open scan is weak; upcoming records
+        are not currently claimable and must not be included in current totals. Use
+        all only for an intentional search across every lifecycle state. Use
+        settlement_type, not keywords, when
         the term describes the type of settlement rather than a specific entity or event.
         Source confidence is returned as objective metadata and quality flags; do not
         exclude possible matches using the provider's verification tier. Do not send
@@ -284,8 +295,11 @@ def create_mcp(
         candidates only, not evidence that the user matches a settlement. Choose
         per-query limits based on expected noise and use max_total_results to bound
         the unique records placed in model context without reducing search breadth.
-        For current eligibility scans, omit status or set it to open; do not use all
-        merely to broaden recall. The response's executed_query_count is the number
+        For current eligibility scans, omit status or set it to open. If that broad
+        scan yields no credible leads or only weak leads, a separate focused batch
+        may use upcoming to build a clearly labeled watchlist. Never mix upcoming
+        records into current matches or claimable totals, and do not use all merely
+        to broaden recall. The response's executed_query_count is the number
         of independent searches performed in this call.
         """
         return active_service.search_many(

@@ -6,7 +6,14 @@ from typing import Any
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from redra_mcp.models import SettlementRecord
+from redra_mcp.models import (
+    ATTRIBUTION,
+    REDRA_ATTRIBUTION,
+    REDRA_SOURCE_CHANGES,
+    SOURCE_CHANGES,
+    SOURCE_LICENSE_URL,
+    SettlementRecord,
+)
 
 
 SECONDARY_SOURCE_HOSTS = {
@@ -166,6 +173,8 @@ def derive_claimability(
     deadline = _parse_date(claim_deadline)
     if status in {"payments started", "payment pending"}:
         return "automatic_payment"
+    if status == "upcoming":
+        return "upcoming"
     if status == "claim window closed":
         return "claim_closed"
     if status == "open for claims":
@@ -191,6 +200,7 @@ def status_for_claimability(value: str) -> str:
         "claim_open": "open",
         "claim_closed": "closed",
         "automatic_payment": "payment",
+        "upcoming": "upcoming",
     }.get(value, "unknown")
 
 
@@ -236,6 +246,9 @@ def normalize_status(value: str | None) -> str:
 
 
 def record_id(raw: dict[str, Any]) -> str:
+    supplied = clean_text(raw.get("id"), max_length=160)
+    if supplied:
+        return supplied
     url = safe_url(
         raw.get("url") or raw.get("@id"), allowed_hosts={"settlesignal.com"}
     ) or ""
@@ -251,9 +264,14 @@ def record_id(raw: dict[str, Any]) -> str:
 
 def normalize_record(raw: dict[str, Any], *, today: date | None = None) -> SettlementRecord:
     active_date = today or current_us_date()
-    source_url = safe_url(
-        raw.get("url") or raw.get("@id"), allowed_hosts={"settlesignal.com"}
-    ) or "https://settlesignal.com/"
+    redra_record = bool(clean_text(raw.get("id"), max_length=160).startswith("redra-"))
+    source_url = (
+        safe_url(raw.get("source_url"))
+        if redra_record
+        else safe_url(
+            raw.get("url") or raw.get("@id"), allowed_hosts={"settlesignal.com"}
+        )
+    ) or ("https://redra.ai" if redra_record else "https://settlesignal.com/")
     raw_states = raw.get("applicable_states", [])
     states = []
     if isinstance(raw_states, list):
@@ -268,8 +286,12 @@ def normalize_record(raw: dict[str, Any], *, today: date | None = None) -> Settl
     official_claim_url = safe_url(raw.get("official_claim_url"))
     official_settlement_url = safe_url(raw.get("official_settlement_url"))
     has_claim_url = claim_url_available(official_claim_url)
-    source_kind = derive_source_kind(
-        official_settlement_url, official_claim_url
+    supplied_source_kind = clean_text(raw.get("source_kind"), max_length=32)
+    source_kind = (
+        supplied_source_kind
+        if redra_record
+        and supplied_source_kind in {"administrator", "court", "government"}
+        else derive_source_kind(official_settlement_url, official_claim_url)
     )
     status = clean_text(raw.get("status"), max_length=80, default="Unknown")
     settlement_type = clean_text(raw.get("settlement_type"), max_length=80)
@@ -287,7 +309,9 @@ def normalize_record(raw: dict[str, Any], *, today: date | None = None) -> Settl
         "claim_deadline": claim_deadline.isoformat() if claim_deadline else None,
         "official_claim_url": official_claim_url,
         "official_settlement_url": official_settlement_url,
-        "last_verified": clean_text(raw.get("last_verified"), max_length=10),
+        "last_verified": clean_text(
+            raw.get("source_checked_at") or raw.get("last_verified"), max_length=10
+        ),
     }
     proof_required = clean_text(
         raw.get("proof_required"), max_length=20, default="unknown"
@@ -295,7 +319,8 @@ def normalize_record(raw: dict[str, Any], *, today: date | None = None) -> Settl
     if proof_required not in VALID_PROOF_REQUIREMENTS:
         proof_required = "unknown"
     verification_status = clean_text(
-        raw.get("verification_status"), max_length=40
+        raw.get("source_verification_status") or raw.get("verification_status"),
+        max_length=40,
     ).casefold()
     if verification_status not in VALID_VERIFICATION_STATUSES:
         verification_status = None
@@ -305,6 +330,8 @@ def normalize_record(raw: dict[str, Any], *, today: date | None = None) -> Settl
         title=clean_text(
             raw.get("title"), max_length=300, default="Untitled settlement"
         ),
+        description=clean_text(raw.get("description"), max_length=1_500),
+        eligibility=clean_text(raw.get("eligibility"), max_length=1_500),
         category=clean_text(raw.get("category"), max_length=100),
         settlement_type=settlement_type,
         status=status,
@@ -316,6 +343,13 @@ def normalize_record(raw: dict[str, Any], *, today: date | None = None) -> Settl
         official_settlement_url=official_settlement_url,
         estimated_payout=clean_text(raw.get("estimated_payout"), max_length=2_000)
         or None,
+        published_amount_cents=(
+            raw.get("published_amount_cents")
+            if isinstance(raw.get("published_amount_cents"), int)
+            and not isinstance(raw.get("published_amount_cents"), bool)
+            and raw.get("published_amount_cents") > 0
+            else None
+        ),
         source_verification_status=verification_status,
         source_checked_at=source_checked_at,
         source_kind=source_kind,
@@ -328,5 +362,26 @@ def normalize_record(raw: dict[str, Any], *, today: date | None = None) -> Settl
             claimability=claimability,
             has_claim_url=has_claim_url,
         ),
+        lifecycle_stage=clean_text(raw.get("lifecycle_stage"), max_length=64) or None,
+        provenance_tier=(
+            raw.get("provenance_tier")
+            if raw.get("provenance_tier") in {"A", "B"}
+            else None
+        ),
+        independently_discovered=bool(raw.get("independently_discovered")),
+        include_in_claimable_total=bool(raw.get("include_in_claimable_total")),
+        future_claim_window_evidenced=bool(
+            raw.get("future_claim_window_evidenced")
+        ),
         source_url=source_url,
+        source_name=clean_text(
+            raw.get("source_name"), max_length=100,
+            default="Redra" if redra_record else "SettleSignal",
+        ),
+        source_license=clean_text(
+            raw.get("source_license"), max_length=100, default="CC BY 4.0"
+        ),
+        source_license_url=SOURCE_LICENSE_URL,
+        source_attribution=REDRA_ATTRIBUTION if redra_record else ATTRIBUTION,
+        source_changes=REDRA_SOURCE_CHANGES if redra_record else SOURCE_CHANGES,
     )

@@ -10,6 +10,8 @@ from redra_mcp.database import SCHEMA_VERSION, connect
 from redra_mcp.models import (
     ATTRIBUTION,
     DISCLAIMER,
+    REDRA_ATTRIBUTION,
+    REDRA_SOURCE_CHANGES,
     DatasetInfo,
     SearchQuery,
     SearchResponse,
@@ -42,6 +44,9 @@ class SQLiteProvider:
             data["normalized_status"] = "unknown"
         data["applicable_states"] = json.loads(data["applicable_states"] or "[]")
         data["quality_flags"] = json.loads(data["quality_flags"] or "[]")
+        if data.get("source_name") == "Redra":
+            data["source_attribution"] = REDRA_ATTRIBUTION
+            data["source_changes"] = REDRA_SOURCE_CHANGES
         return SettlementRecord.model_validate(data)
 
     def search(self, query: SearchQuery) -> SearchResponse:
@@ -100,12 +105,15 @@ class SQLiteProvider:
             """,
             [*params, query.limit],
         ).fetchall()
+        attribution_row = self.connection.execute(
+            "SELECT value FROM metadata WHERE key = 'source_attribution'"
+        ).fetchone()
         return SearchResponse(
             query=query,
             count=count,
             items=[self._record(row) for row in rows],
             provider=self.name,
-            attribution=ATTRIBUTION,
+            attribution=(attribution_row["value"] if attribution_row else ATTRIBUTION),
             disclaimer=DISCLAIMER,
         )
 
@@ -140,21 +148,39 @@ class SQLiteProvider:
         counts = self.connection.execute(
             """
             SELECT COUNT(*) AS total,
-                   SUM(CASE WHEN normalized_status = 'open' THEN 1 ELSE 0 END) AS open
+                   SUM(CASE WHEN normalized_status = 'open' THEN 1 ELSE 0 END) AS open,
+                   SUM(CASE WHEN normalized_status = 'upcoming' THEN 1 ELSE 0 END) AS upcoming
             FROM settlements
             """
         ).fetchone()
+        source_name = metadata.get("source_name") or "SettleSignal"
         return DatasetInfo(
             provider=self.name,
             record_count=counts["total"],
             open_record_count=counts["open"] or 0,
+            upcoming_record_count=counts["upcoming"] or 0,
             dataset_generated_at=metadata.get("dataset_generated_at") or None,
             dataset_modified_at=metadata.get("dataset_modified_at") or None,
             imported_at=metadata.get("imported_at") or None,
             source_url=metadata.get("source_url")
             or "https://settlesignal.com/data/settlements.json",
+            source_name=source_name,
+            source_license=metadata.get("source_license") or "CC BY 4.0",
+            source_dataset_url=metadata.get("source_dataset_url")
+            or "https://huggingface.co/datasets/katana957/us-settlement-catalog",
+            source_changes=metadata.get("source_changes")
+            or "Redra normalizes source fields and adds derived lifecycle and quality metadata.",
             attribution=metadata.get("source_attribution") or ATTRIBUTION,
             schema_version=int(metadata.get("schema_version", SCHEMA_VERSION)),
+            extra={
+                "independent_dataset": metadata.get("independent_dataset") == "true",
+                "publication_manifest_sha256": metadata.get(
+                    "publication_manifest_sha256"
+                ) or None,
+                "claimable_total_count": int(
+                    metadata.get("claimable_total_count") or counts["open"] or 0
+                ),
+            },
         )
 
     def close(self) -> None:
