@@ -40,7 +40,7 @@ SettlementType = Literal[
     "regulatory_compensation_program",
     "state_ag_refund",
 ]
-ProofRequirement = Literal["yes", "no", "optional", "unknown"]
+ProofRequirement = Literal["yes", "no", "optional", "varies", "unknown"]
 
 SOURCE_NAME = "SettleSignal"
 SOURCE_DATASET_URL = "https://huggingface.co/datasets/katana957/us-settlement-catalog"
@@ -108,7 +108,7 @@ class SearchQuery(BaseModel):
     )
     proof_required: ProofRequirement | None = Field(
         default=None,
-        description="Exact proof requirement: yes, no, optional, or unknown.",
+        description="Exact proof requirement: yes, no, optional, varies, or unknown.",
     )
     deadline_after: date | None = Field(
         default=None,

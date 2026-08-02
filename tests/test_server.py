@@ -109,6 +109,7 @@ def test_exposed_tool_surface():
         "yes",
         "no",
         "optional",
+        "varies",
         "unknown",
     ]
     assert search.parameters["properties"]["deadline_after"]["anyOf"][0] == {

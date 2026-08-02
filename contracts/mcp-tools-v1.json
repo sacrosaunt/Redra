@@ -1,0 +1,395 @@
+{
+  "compatibility": "Tool removals, renames, parameter removals, type changes, or tighter bounds require a reviewed contract version. Additive optional fields may be released within v1 after client regression testing.",
+  "schema": "redra-mcp-tool-contract/v1",
+  "tools": [
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Search settlement records by keywords and structured filters.\n\n        Every keyword is required: the list uses logical AND, not OR. Use separate\n        searches for unrelated companies, products, or alternative terms. Keywords\n        should describe companies, products, services, employers, incidents, or\n        notices. For a broad eligibility scan, think expansively using relevant\n        context and memory available to the agent and make multiple queries across\n        plausible brands, aliases, parent companies, subsidiaries, purchases,\n        providers, fees, incidents, and eligibility-relevant demographic angles such\n        as age group, occupation, student or veteran status, parent or guardian status,\n        and housing or household situation. Use the state filter for location. Do not\n        invent user facts; speculative associations are search candidates only. Status is the\n        claim lifecycle and defaults to open. Use upcoming only as a separate,\n        clearly labeled watchlist after a broad open scan is weak; upcoming records\n        are not currently claimable and must not be included in current totals. Use\n        all only for an intentional search across every lifecycle state. Use\n        settlement_type, not keywords, when\n        the term describes the type of settlement rather than a specific entity or event.\n        Source confidence is returned as objective metadata and quality flags; do not\n        exclude possible matches using the provider's verification tier. Do not send\n        names, addresses, account numbers, health details, or other identifying data.\n        State is a two-letter US postal abbreviation.\n        ",
+      "inputSchema": {
+        "properties": {
+          "deadline_after": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include deadlines on or after this ISO 8601 date.",
+            "title": "Deadline After"
+          },
+          "deadline_before": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include deadlines on or before this ISO 8601 date.",
+            "title": "Deadline Before"
+          },
+          "keywords": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Required AND terms for specific companies, brands, products, employers, or incidents. Do not put a settlement-type label here when settlement_type applies. For broad eligibility scans, make multiple separate searches covering plausible aliases, related brands, parent companies, services, purchases, fees, incidents, and eligibility-relevant demographic angles.",
+            "title": "Keywords"
+          },
+          "limit": {
+            "default": 20,
+            "description": "Maximum records returned, from 1 to 50.",
+            "maximum": 50,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "proof_required": {
+            "anyOf": [
+              {
+                "enum": [
+                  "yes",
+                  "no",
+                  "optional",
+                  "varies",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact proof requirement: yes, no, optional, varies, or unknown.",
+            "title": "Proof Required"
+          },
+          "settlement_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "class_action_settlement",
+                  "consumer_product_settlement",
+                  "data_breach_settlement",
+                  "financial_fee_settlement",
+                  "government_refund",
+                  "other_consumer_compensation",
+                  "privacy_settlement",
+                  "regulatory_compensation_program",
+                  "state_ag_refund"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact settlement taxonomy filter. Prefer this over keywords for type concepts such as data breaches, privacy, refunds, financial fees, or consumer products.",
+            "title": "Settlement Type"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "maxLength": 2,
+                "minLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional two-letter US postal abbreviation, such as CA.",
+            "title": "State"
+          },
+          "status": {
+            "default": "open",
+            "description": "Claim lifecycle: open, upcoming, closed, payment, unknown, or all. Defaults to open. Use upcoming only for a clearly labeled watchlist after open results are weak; it is not claimable. Use all only when intentionally including every lifecycle state.",
+            "enum": [
+              "open",
+              "upcoming",
+              "closed",
+              "payment",
+              "unknown",
+              "all"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "search_settlementsArguments",
+        "type": "object"
+      },
+      "name": "search_settlements",
+      "title": "Search settlements"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Run multiple independent settlement searches in one tool call.\n\n        Prefer this tool for broad eligibility scans and alternative terms. Each\n        query is evaluated independently. Returned records are deduplicated across\n        queries and include matched_query_indices that point to the query summaries.\n        Do not combine unrelated alternatives in one keywords list: keywords within\n        each query use logical AND, never OR. Speculative associations are search\n        candidates only, not evidence that the user matches a settlement. Choose\n        per-query limits based on expected noise and use max_total_results to bound\n        the unique records placed in model context without reducing search breadth.\n        For current eligibility scans, omit status or set it to open. If that broad\n        scan yields no credible leads or only weak leads, a separate focused batch\n        may use upcoming to build a clearly labeled watchlist. Never mix upcoming\n        records into current matches or claimable totals, and do not use all merely\n        to broaden recall. The response's executed_query_count is the number\n        of independent searches performed in this call.\n        ",
+      "inputSchema": {
+        "$defs": {
+          "SearchQuery": {
+            "additionalProperties": false,
+            "properties": {
+              "deadline_after": {
+                "anyOf": [
+                  {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Include deadlines on or after this ISO 8601 date.",
+                "title": "Deadline After"
+              },
+              "deadline_before": {
+                "anyOf": [
+                  {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Include deadlines on or before this ISO 8601 date.",
+                "title": "Deadline Before"
+              },
+              "keywords": {
+                "description": "Terms combined with logical AND. Put unrelated companies, products, or alternatives in separate batch query objects.",
+                "items": {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "title": "Keywords",
+                "type": "array"
+              },
+              "limit": {
+                "default": 20,
+                "description": "Maximum results for this independent query, from 1 to 50.",
+                "maximum": 50,
+                "minimum": 1,
+                "title": "Limit",
+                "type": "integer"
+              },
+              "proof_required": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "yes",
+                      "no",
+                      "optional",
+                      "varies",
+                      "unknown"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Exact proof requirement: yes, no, optional, varies, or unknown.",
+                "title": "Proof Required"
+              },
+              "settlement_type": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "class_action_settlement",
+                      "consumer_product_settlement",
+                      "data_breach_settlement",
+                      "financial_fee_settlement",
+                      "government_refund",
+                      "other_consumer_compensation",
+                      "privacy_settlement",
+                      "regulatory_compensation_program",
+                      "state_ag_refund"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Exact settlement taxonomy filter. Use this instead of keywords for type concepts such as privacy, data breaches, or financial fees.",
+                "title": "Settlement Type"
+              },
+              "state": {
+                "anyOf": [
+                  {
+                    "maxLength": 2,
+                    "minLength": 2,
+                    "pattern": "^[A-Za-z]{2}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Optional two-letter US postal abbreviation, such as CA.",
+                "title": "State"
+              },
+              "status": {
+                "default": "open",
+                "description": "Claim lifecycle; defaults to open. Use upcoming only as an explicit watchlist search for evidenced future claim windows, not current claims. Use all only when intentionally searching every lifecycle state.",
+                "enum": [
+                  "open",
+                  "upcoming",
+                  "closed",
+                  "payment",
+                  "unknown",
+                  "all"
+                ],
+                "title": "Status",
+                "type": "string"
+              }
+            },
+            "title": "SearchQuery",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "max_total_results": {
+            "default": 50,
+            "description": "Maximum unique settlement records returned across the whole batch after cross-query deduplication. This caps output, not the number of independent searches performed.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Max Total Results",
+            "type": "integer"
+          },
+          "queries": {
+            "description": "Independent settlement searches. Use one query object per unrelated company, product, alias, alternative term, or search angle. Keywords inside each object still use logical AND.",
+            "items": {
+              "$ref": "#/$defs/SearchQuery"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Queries",
+            "type": "array"
+          }
+        },
+        "required": [
+          "queries"
+        ],
+        "title": "search_settlements_batchArguments",
+        "type": "object"
+      },
+      "name": "search_settlements_batch",
+      "title": "Search settlements in a batch"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Return one settlement and its official source links.\n\n        When web access is available, use the official links to verify the complete\n        class definition and eligibility terms before presenting the record as more\n        than a possible match. Present plausible matches as concise lead cards that\n        separate confirmed terms, relevant user context, and facts still needed.\n        If browsing is unavailable, say the terms could not be independently checked,\n        avoid guessing, and direct the user to the official link.\n        ",
+      "inputSchema": {
+        "properties": {
+          "settlement_id": {
+            "description": "Exact settlement identifier returned by a search.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Settlement Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "settlement_id"
+        ],
+        "title": "get_settlementArguments",
+        "type": "object"
+      },
+      "name": "get_settlement",
+      "title": "Get a settlement"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Return complete stored records for multiple settlement finalists.\n\n        Retrieve every finalist before presenting it. Use the records and official\n        links to separate evidence-backed leads from plausible or speculative leads.\n        A detail record does not itself prove that the user is eligible. If browsing\n        is available, verify the complete class definition on the official source.\n        ",
+      "inputSchema": {
+        "properties": {
+          "settlement_ids": {
+            "description": "Settlement identifiers to retrieve together. Use this for every finalist from a broad scan before composing the final answer.",
+            "items": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Settlement Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "settlement_ids"
+        ],
+        "title": "get_settlementsArguments",
+        "type": "object"
+      },
+      "name": "get_settlements",
+      "title": "Get settlements"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Return source, license, freshness, counts, and hosted aggregate metrics.",
+      "inputSchema": {
+        "properties": {},
+        "title": "get_dataset_infoArguments",
+        "type": "object"
+      },
+      "name": "get_dataset_info",
+      "title": "Get dataset information"
+    }
+  ]
+}

@@ -201,7 +201,7 @@ def create_mcp(
         proof_required: Annotated[
             ProofRequirement | None,
             Field(
-                description=("Exact proof requirement: yes, no, optional, or unknown.")
+                description=("Exact proof requirement: yes, no, optional, varies, or unknown.")
             ),
         ] = None,
         deadline_after: Annotated[
