@@ -9,7 +9,7 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Search settlement records by keywords and structured filters.\n\n        Every keyword is required: the list uses logical AND, not OR. Use separate\n        searches for unrelated companies, products, or alternative terms. Keywords\n        should describe companies, products, services, employers, incidents, or\n        notices. For a broad eligibility scan, think expansively using relevant\n        context and memory available to the agent and make multiple queries across\n        plausible brands, aliases, parent companies, subsidiaries, purchases,\n        providers, fees, incidents, and eligibility-relevant demographic angles such\n        as age group, occupation, student or veteran status, parent or guardian status,\n        and housing or household situation. Use the state filter for location. Do not\n        invent user facts; speculative associations are search candidates only. Status is the\n        claim lifecycle and defaults to open. Use upcoming only as a separate,\n        clearly labeled watchlist after a broad open scan is weak; upcoming records\n        are not currently claimable and must not be included in current totals. Use\n        all only for an intentional search across every lifecycle state. Use\n        settlement_type, not keywords, when\n        the term describes the type of settlement rather than a specific entity or event.\n        Source confidence is returned as objective metadata and quality flags; do not\n        exclude possible matches using the provider's verification tier. Do not send\n        names, addresses, account numbers, health details, or other identifying data.\n        State is a two-letter US postal abbreviation.\n        ",
+      "description": "Search one settlement angle using logical AND keywords and structured\n        status, type, state, proof, and deadline filters. Status defaults to open.\n        Results include source metadata and quality flags.",
       "inputSchema": {
         "properties": {
           "deadline_after": {
@@ -56,7 +56,7 @@
               }
             ],
             "default": null,
-            "description": "Required AND terms for specific companies, brands, products, employers, or incidents. Do not put a settlement-type label here when settlement_type applies. For broad eligibility scans, make multiple separate searches covering plausible aliases, related brands, parent companies, services, purchases, fees, incidents, and eligibility-relevant demographic angles.",
+            "description": "Required logical-AND terms for specific companies, brands, products, employers, services, or incidents. Use separate queries for alternatives and settlement_type for taxonomy.",
             "title": "Keywords"
           },
           "limit": {
@@ -155,7 +155,7 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Run multiple independent settlement searches in one tool call.\n\n        Prefer this tool for broad eligibility scans and alternative terms. Each\n        query is evaluated independently. Returned records are deduplicated across\n        queries and include matched_query_indices that point to the query summaries.\n        Do not combine unrelated alternatives in one keywords list: keywords within\n        each query use logical AND, never OR. Speculative associations are search\n        candidates only, not evidence that the user matches a settlement. Choose\n        per-query limits based on expected noise and use max_total_results to bound\n        the unique records placed in model context without reducing search breadth.\n        For current eligibility scans, omit status or set it to open. If that broad\n        scan yields no credible leads or only weak leads, a separate focused batch\n        may use upcoming to build a clearly labeled watchlist. Never mix upcoming\n        records into current matches or claimable totals, and do not use all merely\n        to broaden recall. The response's executed_query_count is the number\n        of independent searches performed in this call.\n        ",
+      "description": "Run up to 50 independent settlement searches and deduplicate records\n        across queries. Results include matched_query_indices, and\n        executed_query_count reports the number of searches performed. Use when\n        several unrelated search angles should be evaluated together.",
       "inputSchema": {
         "$defs": {
           "SearchQuery": {
@@ -297,7 +297,7 @@
             "type": "integer"
           },
           "queries": {
-            "description": "Independent settlement searches. Use one query object per unrelated company, product, alias, alternative term, or search angle. Keywords inside each object still use logical AND.",
+            "description": "Independent settlement searches. Each query retains logical-AND keyword semantics; unrelated alternatives belong in separate query objects.",
             "items": {
               "$ref": "#/$defs/SearchQuery"
             },
@@ -323,7 +323,7 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Return one settlement and its official source links.\n\n        When web access is available, use the official links to verify the complete\n        class definition and eligibility terms before presenting the record as more\n        than a possible match. Present plausible matches as concise lead cards that\n        separate confirmed terms, relevant user context, and facts still needed.\n        If browsing is unavailable, say the terms could not be independently checked,\n        avoid guessing, and direct the user to the official link.\n        ",
+      "description": "Return the complete stored record and official source links for one\n        settlement ID produced by a search.",
       "inputSchema": {
         "properties": {
           "settlement_id": {
@@ -350,11 +350,11 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Return complete stored records for multiple settlement finalists.\n\n        Retrieve every finalist before presenting it. Use the records and official\n        links to separate evidence-backed leads from plausible or speculative leads.\n        A detail record does not itself prove that the user is eligible. If browsing\n        is available, verify the complete class definition on the official source.\n        ",
+      "description": "Return complete stored records and official source links for up to 20\n        settlement IDs produced by search.",
       "inputSchema": {
         "properties": {
           "settlement_ids": {
-            "description": "Settlement identifiers to retrieve together. Use this for every finalist from a broad scan before composing the final answer.",
+            "description": "Settlement identifiers returned by search to retrieve together.",
             "items": {
               "maxLength": 200,
               "minLength": 1,
