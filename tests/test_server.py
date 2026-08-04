@@ -16,15 +16,17 @@ def test_exposed_tool_surface():
     ]
 
     search = tools[0]
-    assert [tool.title for tool in tools] == [
+    expected_titles = [
         "Search settlements",
         "Search settlements in a batch",
         "Get a settlement",
         "Get settlements",
         "Get dataset information",
     ]
-    for tool in tools:
+    assert [tool.title for tool in tools] == expected_titles
+    for tool, expected_title in zip(tools, expected_titles, strict=True):
         assert tool.annotations is not None
+        assert tool.annotations.title == expected_title
         assert tool.annotations.readOnlyHint is True
         assert tool.annotations.destructiveHint is False
         assert tool.annotations.idempotentHint is True
