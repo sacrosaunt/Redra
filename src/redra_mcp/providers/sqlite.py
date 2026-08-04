@@ -55,9 +55,8 @@ class SQLiteProvider:
             where.append("settlements_fts MATCH ?")
             params.append(fts)
             rank_column = "bm25(settlements_fts) AS rank"
-        if query.status != "all":
-            where.append("s.normalized_status = ?")
-            params.append(query.status)
+        where.append("s.normalized_status = ?")
+        params.append(query.status)
         if query.settlement_type:
             where.append("s.settlement_type = ?")
             params.append(query.settlement_type)
@@ -140,7 +139,8 @@ class SQLiteProvider:
         counts = self.connection.execute(
             """
             SELECT COUNT(*) AS total,
-                   SUM(CASE WHEN normalized_status = 'open' THEN 1 ELSE 0 END) AS open
+                   SUM(CASE WHEN normalized_status = 'open' THEN 1 ELSE 0 END) AS open,
+                   SUM(CASE WHEN normalized_status = 'upcoming' THEN 1 ELSE 0 END) AS upcoming
             FROM settlements
             """
         ).fetchone()
@@ -148,6 +148,7 @@ class SQLiteProvider:
             provider=self.name,
             record_count=counts["total"],
             open_record_count=counts["open"] or 0,
+            upcoming_record_count=counts["upcoming"] or 0,
             dataset_generated_at=metadata.get("dataset_generated_at") or None,
             dataset_modified_at=metadata.get("dataset_modified_at") or None,
             imported_at=metadata.get("imported_at") or None,

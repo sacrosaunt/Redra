@@ -195,10 +195,11 @@ choice where appropriate, and never request identifying or sensitive information
 Agents without browsing must say that they could not independently verify the
 complete terms, avoid guessing, and direct the user to the official link.
 
-Claim `status` defaults to `open`. Use the explicit `all` value only when
-intentionally including non-open lifecycle states. Supported statuses are `open`,
-`closed`, `payment`, `unknown`, and `all`; `null` is rejected so clients cannot
-silently widen a current-claims search.
+Claim `status` defaults to `open`. The public MCP supports only `open` and
+`upcoming`. Upcoming records are not yet claimable, are presented as a separate
+watchlist, and are excluded from current claim counts and money totals. Historical,
+payment, and uncertain lifecycle states remain internal rather than being exposed
+as public search options.
 
 The provider's opaque verification tier is not a search filter. It is retained in
 results as `source_verification_status` for transparency. Redra also returns

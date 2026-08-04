@@ -43,6 +43,9 @@ def test_exposed_tool_surface():
     assert "why each surfaced" in SERVER_INSTRUCTIONS
     assert "Ask only focused, non-sensitive follow-up" in SERVER_INSTRUCTIONS
     assert "status open" in SERVER_INSTRUCTIONS
+    assert "Upcoming records are not yet claimable" in SERVER_INSTRUCTIONS
+    assert "excluded from current" in SERVER_INSTRUCTIONS
+    assert "claim counts and money totals" in SERVER_INSTRUCTIONS
     assert "complete stored record" in SERVER_INSTRUCTIONS
     assert "linked administrator, court, or government source" in SERVER_INSTRUCTIONS
     assert "no matching record in Redra" in SERVER_INSTRUCTIONS
@@ -61,7 +64,7 @@ def test_exposed_tool_surface():
     assert search.parameters["properties"]["limit"]["minimum"] == 1
     assert search.parameters["properties"]["limit"]["maximum"] == 50
     claim_statuses = search.parameters["properties"]["status"]["enum"]
-    assert claim_statuses == ["open", "closed", "payment", "unknown", "all"]
+    assert claim_statuses == ["open", "upcoming"]
     assert "anyOf" not in search.parameters["properties"]["status"]
     assert "verification_status" not in search.parameters["properties"]
     type_property = search.parameters["properties"]["settlement_type"]
@@ -103,10 +106,7 @@ def test_exposed_tool_surface():
     assert batch_query["properties"]["status"]["default"] == "open"
     assert batch_query["properties"]["status"]["enum"] == [
         "open",
-        "closed",
-        "payment",
-        "unknown",
-        "all",
+        "upcoming",
     ]
     assert "anyOf" not in batch_query["properties"]["status"]
     result_limit = batch.parameters["properties"]["max_total_results"]

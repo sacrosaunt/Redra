@@ -32,8 +32,9 @@ email addresses, credentials, or account and claim numbers.
 Keywords within one query use logical AND. Use search_settlements_batch for
 independent companies, products, aliases, parent brands, services, employers,
 incidents, fees, or demographic search angles. Current-claim research defaults to
-status open. Use status all only when the user explicitly requests every lifecycle
-state.
+status open. If open results are weak, status upcoming may be used for a separate
+watchlist. Upcoming records are not yet claimable and must be excluded from current
+claim counts and money totals.
 
 Retrieve the complete stored record for each finalist with get_settlement or
 get_settlements. Redra's linked administrator, court, or government source—not the
@@ -113,9 +114,9 @@ def create_mcp(
             SearchStatus,
             Field(
                 description=(
-                    "Claim lifecycle: open, closed, payment, unknown, or all. "
-                    "Defaults to open. Use all only when intentionally including "
-                    "non-open lifecycle states."
+                    "Public lifecycle filter: open or upcoming. Defaults to open. "
+                    "Upcoming records are not yet claimable and must be presented "
+                    "as a separate watchlist."
                 )
             ),
         ] = "open",

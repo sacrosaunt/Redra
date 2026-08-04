@@ -11,9 +11,11 @@ def test_search_query_normalizes_input():
     assert query.status == "open"
 
 
-def test_search_query_requires_explicit_all_status():
-    assert SearchQuery(status="all").status == "all"
-
+def test_search_query_only_exposes_open_and_upcoming():
+    assert SearchQuery(status="upcoming").status == "upcoming"
+    for unsupported in ("closed", "payment", "unknown", "all"):
+        with pytest.raises(ValidationError):
+            SearchQuery(status=unsupported)
     with pytest.raises(ValidationError):
         SearchQuery(status=None)
 

@@ -166,6 +166,8 @@ def derive_claimability(
     deadline = _parse_date(claim_deadline)
     if status in {"payments started", "payment pending"}:
         return "automatic_payment"
+    if status == "upcoming":
+        return "upcoming"
     if status == "claim window closed":
         return "claim_closed"
     if status == "open for claims":
@@ -191,6 +193,7 @@ def status_for_claimability(value: str) -> str:
         "claim_open": "open",
         "claim_closed": "closed",
         "automatic_payment": "payment",
+        "upcoming": "upcoming",
     }.get(value, "unknown")
 
 

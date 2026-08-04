@@ -32,12 +32,12 @@ def test_import_and_search(tmp_path, settlesignal_payload):
         )
         assert and_match.count == 1
         and_miss = provider.search(
-            SearchQuery(keywords=["Acme", "wages"], status="all")
+            SearchQuery(keywords=["Acme", "wages"], status="open")
         )
         assert and_miss.count == 0
 
         breach_type = provider.search(
-            SearchQuery(status="all", settlement_type="data_breach_settlement")
+            SearchQuery(status="open", settlement_type="data_breach_settlement")
         )
         assert breach_type.count == 1
         assert breach_type.items[0].id == "acme-data-breach"
@@ -53,12 +53,13 @@ def test_import_and_search(tmp_path, settlesignal_payload):
         nationwide = provider.search(SearchQuery(state="NY", status="open"))
         assert nationwide.count == 1
 
-        closed_ca = provider.search(SearchQuery(state="CA", status="closed"))
-        assert closed_ca.count == 1
+        upcoming = provider.search(SearchQuery(status="upcoming"))
+        assert upcoming.count == 0
 
         info = provider.info()
         assert info.record_count == 2
         assert info.open_record_count == 1
+        assert info.upcoming_record_count == 0
         assert info.schema_version == 2
         assert info.source_dataset_url == (
             "https://huggingface.co/datasets/katana957/us-settlement-catalog"

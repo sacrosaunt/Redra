@@ -6,8 +6,8 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-ClaimStatus = Literal["open", "closed", "payment", "unknown"]
-SearchStatus = Literal["open", "closed", "payment", "unknown", "all"]
+ClaimStatus = Literal["open", "upcoming", "closed", "payment", "unknown"]
+SearchStatus = Literal["open", "upcoming"]
 VerificationStatus = Literal[
     "administrator_verified",
     "court_verified",
@@ -16,7 +16,9 @@ VerificationStatus = Literal[
     "third_party_only",
 ]
 SourceKind = Literal["administrator", "court", "government", "secondary", "unknown"]
-Claimability = Literal["claim_open", "claim_closed", "automatic_payment", "unknown"]
+Claimability = Literal[
+    "claim_open", "upcoming", "claim_closed", "automatic_payment", "unknown"
+]
 QualityFlag = Literal[
     "missing_deadline",
     "missing_claim_url",
@@ -80,8 +82,8 @@ class SearchQuery(BaseModel):
     status: SearchStatus = Field(
         default="open",
         description=(
-            "Claim lifecycle; defaults to open. Use all only when intentionally "
-            "searching non-open lifecycle states as well."
+            "Public lifecycle filter: open or upcoming. Defaults to open. Upcoming "
+            "records are not yet claimable and belong in a separate watchlist."
         ),
     )
     settlement_type: SettlementType | None = Field(
@@ -186,6 +188,7 @@ class DatasetInfo(BaseModel):
     provider: str
     record_count: int
     open_record_count: int
+    upcoming_record_count: int = 0
     dataset_generated_at: str | None = None
     dataset_modified_at: str | None = None
     imported_at: str | None = None

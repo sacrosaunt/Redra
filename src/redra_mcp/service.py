@@ -85,7 +85,7 @@ class RedraService:
             self._search_cache[key] = SearchCacheEntry(
                 expires_at=self._clock() + self.search_cache_ttl_seconds,
                 response=response.model_copy(
-                    update={"query": SearchQuery(keywords=[], status="all")}
+                    update={"query": SearchQuery(keywords=[], status=query.status)}
                 ),
             )
             while len(self._search_cache) > self.search_cache_max_entries:

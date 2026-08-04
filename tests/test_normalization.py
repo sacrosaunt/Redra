@@ -3,6 +3,20 @@ from datetime import date
 from redra_mcp.normalization import normalize_record
 
 
+def test_upcoming_status_is_preserved_but_not_claimable():
+    record = normalize_record(
+        {
+            "url": "https://settlesignal.com/settlements/futureco/",
+            "title": "FutureCo settlement",
+            "status": "Upcoming",
+            "official_settlement_url": "https://futureco.example/settlement",
+        },
+        today=date(2026, 7, 24),
+    )
+    assert record.normalized_status == "upcoming"
+    assert record.claimability == "upcoming"
+
+
 def test_government_refund_without_claim_form_is_payment():
     record = normalize_record(
         {
