@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-DEFAULT_DATASET_URL = "https://data.redra.ai/catalog/v1/manifest.json"
+DEFAULT_DATASET_URL = "https://settlesignal.com/data/settlements.json"
 
 
 @dataclass(frozen=True, slots=True)

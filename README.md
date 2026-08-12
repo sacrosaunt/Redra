@@ -14,13 +14,19 @@ eligibility, submit claims, or provide legal advice.
 
 ## Data source and license
 
-Local mode downloads Redra's independently assembled publication manifest from
-`https://data.redra.ai/catalog/v1/manifest.json`. Redra collects and normalizes
-factual metadata from linked court, government, and settlement-administrator
-sources. The daily publication is split into content-addressed `open` and
-`upcoming` feeds. Every published record must have independent discovery lineage
-and Tier A or B provenance; a failed validation leaves the prior local snapshot
-untouched.
+During the technical beta, local mode defaults to the public SettleSignal JSON
+feed at `https://settlesignal.com/data/settlements.json`. SettleSignal identifies
+its [Hugging Face dataset card](https://huggingface.co/datasets/katana957/us-settlement-catalog)
+as an official profile, and that card licenses the feed's public fields under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Redra preserves source
+attribution and links while normalizing fields and adding derived lifecycle and
+quality metadata.
+
+Redra also supports its independently assembled, content-addressed `open` and
+`upcoming` publication format. That publication remains in a gated shadow beta;
+it is not the fresh-install default until its launch checks pass. Every imported
+independent record must have independent discovery lineage and Tier A or B
+provenance, and a failed validation leaves the prior local snapshot untouched.
 
 `open` records have a currently usable filing endpoint. `upcoming` records require
 evidence of a future claim window but have no current claim form. They are exposed
@@ -30,9 +36,8 @@ The normalized factual compilation is published under
 official source links and carry source and change attribution. See
 [NOTICE.md](NOTICE.md).
 
-The importer retains compatibility with the former SettleSignal single-file feed
-for existing installations that explicitly set `REDRA_SETTLESIGNAL_URL`. New
-installations use the independently built Redra catalog by default.
+Set `REDRA_DATASET_URL` to an approved Redra publication manifest when one is
+announced. `REDRA_SETTLESIGNAL_URL` remains a legacy alias for that override.
 
 No settlement data is committed to this repository.
 
@@ -47,8 +52,6 @@ The project currently operates this optional public service:
 
 The operational database behind the hosted MCP is private, has no public Fly route,
 and is reachable only by the hosted MCP over authenticated internal networking.
-The same validated, read-only publication bundle used by self-hosters is available
-from `data.redra.ai`; it is not a query API and contains no user data.
 The MCP currently requires no user API key. It does not impose a per-IP quota,
 because hosted AI clients can send many unrelated users through shared network
 addresses. Availability is provided on a best-effort basis without an uptime,
@@ -234,7 +237,7 @@ An empty `applicable_states` list is treated as nationwide.
 | Variable | Purpose | Default |
 | --- | --- | --- |
 | `REDRA_DATABASE_PATH` | Local SQLite database | platform data directory |
-| `REDRA_DATASET_URL` | Dataset manifest or compatible feed override | Redra publication manifest |
+| `REDRA_DATASET_URL` | Dataset manifest or compatible feed override | SettleSignal public feed during beta |
 | `REDRA_SETTLESIGNAL_URL` | Deprecated legacy feed override | unset |
 | `REDRA_REQUEST_TIMEOUT` | HTTP timeout in seconds | `20` |
 | `REDRA_HOST` | Streamable HTTP bind address | `127.0.0.1` |

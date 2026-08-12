@@ -64,6 +64,7 @@ READ_ONLY_ANNOTATIONS = ToolAnnotations(
 
 MAX_BATCH_QUERIES = 50
 MAX_BATCH_RESULTS = 100
+SERVER_VERSION = "0.1.0"
 
 
 def create_mcp(
@@ -84,6 +85,10 @@ def create_mcp(
         port=active_settings.port,
         streamable_http_path="/mcp",
     )
+    # FastMCP otherwise substitutes the SDK package version in the initialize
+    # response. Directory metadata and MCP initialization should identify the
+    # same Redra release.
+    server._mcp_server.version = SERVER_VERSION
 
     @server.tool(
         title="Search settlements",

@@ -6,6 +6,7 @@ from redra_mcp.server import SERVER_INSTRUCTIONS, create_mcp
 
 def test_exposed_tool_surface():
     server = create_mcp(service=MagicMock())
+    assert server._mcp_server.version == "0.1.0"
     tools = server._tool_manager.list_tools()
     assert [tool.name for tool in tools] == [
         "search_settlements",
