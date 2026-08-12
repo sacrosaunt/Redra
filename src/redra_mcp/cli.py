@@ -71,7 +71,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.dataset_command == "update":
             count = update_dataset(
                 settings.database_path,
-                settings.settlesignal_url,
+                settings.dataset_url,
                 timeout=settings.request_timeout,
             )
             print(
@@ -90,7 +90,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     try:
                         count = update_dataset(
                             settings.database_path,
-                            settings.settlesignal_url,
+                            settings.dataset_url,
                             timeout=settings.request_timeout,
                         )
                         print(

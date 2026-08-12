@@ -5,13 +5,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-DEFAULT_SETTLESIGNAL_URL = "https://settlesignal.com/data/settlements.json"
+DEFAULT_DATASET_URL = "https://settlesignal.com/data/settlements.json"
 
 
 @dataclass(frozen=True, slots=True)
 class Settings:
     database_path: Path
-    settlesignal_url: str
+    dataset_url: str
     request_timeout: float
     host: str
     port: int
@@ -27,8 +27,9 @@ class Settings:
         default_db = Path.home() / ".local" / "share" / "redra" / "settlements.db"
         return cls(
             database_path=Path(os.getenv("REDRA_DATABASE_PATH", str(default_db))).expanduser(),
-            settlesignal_url=os.getenv(
-                "REDRA_SETTLESIGNAL_URL", DEFAULT_SETTLESIGNAL_URL
+            dataset_url=os.getenv(
+                "REDRA_DATASET_URL",
+                os.getenv("REDRA_SETTLESIGNAL_URL", DEFAULT_DATASET_URL),
             ),
             request_timeout=float(os.getenv("REDRA_REQUEST_TIMEOUT", "20")),
             host=os.getenv("REDRA_HOST", "127.0.0.1"),

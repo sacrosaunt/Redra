@@ -40,7 +40,7 @@ SettlementType = Literal[
     "regulatory_compensation_program",
     "state_ag_refund",
 ]
-ProofRequirement = Literal["yes", "no", "optional", "unknown"]
+ProofRequirement = Literal["yes", "no", "optional", "varies", "unknown"]
 
 SOURCE_NAME = "SettleSignal"
 SOURCE_DATASET_URL = "https://huggingface.co/datasets/katana957/us-settlement-catalog"
@@ -54,6 +54,18 @@ ATTRIBUTION = (
     "(https://settlesignal.com/). Source dataset: "
     f"{SOURCE_DATASET_URL}. Licensed under {SOURCE_LICENSE} "
     f"({SOURCE_LICENSE_URL}). {SOURCE_CHANGES}"
+)
+REDRA_SOURCE_NAME = "Redra"
+REDRA_SOURCE_DATASET_URL = "https://data.redra.ai/catalog/v1/manifest.json"
+REDRA_SOURCE_LICENSE = "CC-BY-4.0"
+REDRA_SOURCE_CHANGES = (
+    "Redra independently collects, validates, deduplicates, and normalizes factual "
+    "settlement metadata from linked court, government, and settlement-administrator "
+    "sources."
+)
+REDRA_ATTRIBUTION = (
+    "Redra independently collects and normalizes factual settlement metadata from "
+    "linked court, government, and settlement-administrator sources."
 )
 DISCLAIMER = (
     "Potential match only. Confirm eligibility, deadlines, and filing instructions "
@@ -95,7 +107,7 @@ class SearchQuery(BaseModel):
     )
     proof_required: ProofRequirement | None = Field(
         default=None,
-        description="Exact proof requirement: yes, no, optional, or unknown.",
+        description="Exact proof requirement: yes, no, optional, varies, or unknown.",
     )
     deadline_after: date | None = Field(
         default=None,
@@ -151,6 +163,8 @@ class SettlementRecord(BaseModel):
 
     id: str
     title: str
+    description: str = ""
+    eligibility: str = ""
     category: str = ""
     settlement_type: str = ""
     status: str
@@ -161,12 +175,18 @@ class SettlementRecord(BaseModel):
     official_claim_url: str | None = None
     official_settlement_url: str | None = None
     estimated_payout: str | None = None
+    published_amount_cents: int | None = None
     source_verification_status: VerificationStatus | None = None
     source_checked_at: date | None = None
     source_kind: SourceKind = "unknown"
     claimability: Claimability = "unknown"
     claim_url_available: bool = False
     quality_flags: list[QualityFlag] = Field(default_factory=list)
+    lifecycle_stage: str | None = None
+    provenance_tier: Literal["A", "B"] | None = None
+    independently_discovered: bool = False
+    include_in_claimable_total: bool = False
+    future_claim_window_evidenced: bool = False
     source_url: str
     source_name: str = SOURCE_NAME
     source_license: str = SOURCE_LICENSE
