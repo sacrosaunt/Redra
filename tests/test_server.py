@@ -85,8 +85,6 @@ def test_exposed_tool_surface():
     assert proof_property["anyOf"][0]["enum"] == [
         "yes",
         "no",
-        "optional",
-        "varies",
         "unknown",
     ]
     assert search.parameters["properties"]["deadline_after"]["anyOf"][0] == {

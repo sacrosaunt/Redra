@@ -205,8 +205,8 @@ def replace_records(
                     json.dumps(row["applicable_states"], separators=(",", ":")),
                     row["official_claim_url"],
                     row["official_settlement_url"],
-                    row["estimated_payout"],
-                    row["published_amount_cents"],
+                    row["expected_individual_payout"],
+                    row["maximum_cumulative_payout_cents"],
                     row["source_verification_status"],
                     row["source_checked_at"],
                     row["source_kind"],
@@ -235,7 +235,7 @@ def replace_records(
                     row["description"],
                     row["eligibility"],
                     row["category"],
-                    row["estimated_payout"] or "",
+                    row["expected_individual_payout"] or "",
                 ),
             )
 

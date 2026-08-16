@@ -42,7 +42,15 @@ VALID_VERIFICATION_STATUSES = {
     "official_source_found",
     "third_party_only",
 }
-VALID_PROOF_REQUIREMENTS = {"yes", "no", "optional", "unknown"}
+PROOF_YES_VALUES = {
+    "yes",
+    "true",
+    "required",
+    "documentation_required",
+    "attestation_only",
+    "notice_id_or_pin",
+}
+PROOF_NO_VALUES = {"no", "false", "none", "not_required"}
 
 
 def clean_text(value: Any, *, max_length: int, default: str = "") -> str:
@@ -50,6 +58,17 @@ def clean_text(value: Any, *, max_length: int, default: str = "") -> str:
         return default
     cleaned = " ".join(str(value).split())
     return cleaned[:max_length] or default
+
+
+def normalize_proof_requirement(value: Any) -> str:
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    cleaned = clean_text(value, max_length=32, default="unknown").casefold()
+    if cleaned in PROOF_YES_VALUES:
+        return "yes"
+    if cleaned in PROOF_NO_VALUES:
+        return "no"
+    return "unknown"
 
 
 def safe_url(value: Any, *, allowed_hosts: set[str] | None = None) -> str | None:
@@ -313,11 +332,7 @@ def normalize_record(raw: dict[str, Any], *, today: date | None = None) -> Settl
             raw.get("source_checked_at") or raw.get("last_verified"), max_length=10
         ),
     }
-    proof_required = clean_text(
-        raw.get("proof_required"), max_length=20, default="unknown"
-    ).casefold()
-    if proof_required not in VALID_PROOF_REQUIREMENTS:
-        proof_required = "unknown"
+    proof_required = normalize_proof_requirement(raw.get("proof_required"))
     verification_status = clean_text(
         raw.get("source_verification_status") or raw.get("verification_status"),
         max_length=40,
@@ -341,13 +356,15 @@ def normalize_record(raw: dict[str, Any], *, today: date | None = None) -> Settl
         applicable_states=states,
         official_claim_url=official_claim_url,
         official_settlement_url=official_settlement_url,
-        estimated_payout=clean_text(raw.get("estimated_payout"), max_length=2_000)
-        or None,
-        published_amount_cents=(
-            raw.get("published_amount_cents")
-            if isinstance(raw.get("published_amount_cents"), int)
-            and not isinstance(raw.get("published_amount_cents"), bool)
-            and raw.get("published_amount_cents") > 0
+        expected_individual_payout=clean_text(
+            raw.get("expected_individual_payout"),
+            max_length=2_000,
+        ) or None,
+        maximum_cumulative_payout_cents=(
+            raw.get("maximum_cumulative_payout_cents")
+            if isinstance(raw.get("maximum_cumulative_payout_cents"), int)
+            and not isinstance(raw.get("maximum_cumulative_payout_cents"), bool)
+            and raw.get("maximum_cumulative_payout_cents") > 0
             else None
         ),
         source_verification_status=verification_status,

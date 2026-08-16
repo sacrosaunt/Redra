@@ -82,7 +82,7 @@ def test_untrusted_feed_fields_are_bounded_and_urls_are_sanitized():
             "applicable_states": "CA",
             "official_claim_url": "javascript:alert(1)",
             "official_settlement_url": "http://127.0.0.1/admin",
-            "estimated_payout": "x" * 3_000,
+            "expected_individual_payout": "x" * 3_000,
             "verification_status": "invented_status",
         },
         today=date(2026, 7, 24),
@@ -90,7 +90,7 @@ def test_untrusted_feed_fields_are_bounded_and_urls_are_sanitized():
 
     assert len(record.title) == 300
     assert "\n" not in record.title
-    assert len(record.estimated_payout or "") == 2_000
+    assert len(record.expected_individual_payout or "") == 2_000
     assert record.applicable_states == []
     assert record.official_claim_url is None
     assert record.official_settlement_url is None
@@ -109,3 +109,19 @@ def test_url_with_embedded_credentials_is_rejected():
     )
 
     assert record.official_claim_url is None
+
+
+def test_legacy_payout_fields_are_not_accepted():
+    record = normalize_record(
+        {
+            "url": "https://settlesignal.com/settlements/example/",
+            "title": "Example",
+            "proof_required": "optional",
+            "estimated_payout": "Up to $100",
+            "published_amount_cents": 5_000_000,
+        }
+    )
+
+    assert record.proof_required == "unknown"
+    assert record.expected_individual_payout is None
+    assert record.maximum_cumulative_payout_cents is None
