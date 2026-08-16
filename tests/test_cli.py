@@ -12,6 +12,7 @@ def test_self_hosted_rate_limit_is_disabled_by_default(monkeypatch, tmp_path):
     assert Settings.from_env().rate_limit_per_hour == 0
     assert Settings.from_env().max_concurrent_requests == 0
     assert Settings.from_env().max_request_body_bytes == 1_048_576
+    assert Settings.from_env().dataset_provider == "settlesignal"
 
 
 def test_dataset_watch_updates_immediately(monkeypatch, tmp_path):

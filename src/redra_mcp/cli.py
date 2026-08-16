@@ -72,6 +72,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             count = update_dataset(
                 settings.database_path,
                 settings.dataset_url,
+                provider=settings.dataset_provider,
                 timeout=settings.request_timeout,
             )
             print(
@@ -91,6 +92,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         count = update_dataset(
                             settings.database_path,
                             settings.dataset_url,
+                            provider=settings.dataset_provider,
                             timeout=settings.request_timeout,
                         )
                         print(

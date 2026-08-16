@@ -36,8 +36,10 @@ The normalized factual compilation is published under
 official source links and carry source and change attribution. See
 [NOTICE.md](NOTICE.md).
 
-Set `REDRA_DATASET_URL` to an approved Redra publication manifest when one is
-announced. `REDRA_SETTLESIGNAL_URL` remains a legacy alias for that override.
+The provider is explicit and is never inferred from a downloaded payload. Set
+`REDRA_DATASET_PROVIDER=independent` to consume Redra's publication, or leave it
+as `settlesignal` during the transition. `REDRA_DATASET_URL` can override the
+selected provider's default URL.
 
 No settlement data is committed to this repository.
 
@@ -237,8 +239,8 @@ An empty `applicable_states` list is treated as nationwide.
 | Variable | Purpose | Default |
 | --- | --- | --- |
 | `REDRA_DATABASE_PATH` | Local SQLite database | platform data directory |
-| `REDRA_DATASET_URL` | Dataset manifest or compatible feed override | SettleSignal public feed during beta |
-| `REDRA_SETTLESIGNAL_URL` | Deprecated legacy feed override | unset |
+| `REDRA_DATASET_PROVIDER` | Dataset contract: `settlesignal` or `independent` | `settlesignal` |
+| `REDRA_DATASET_URL` | URL override for the selected provider | provider-specific default |
 | `REDRA_REQUEST_TIMEOUT` | HTTP timeout in seconds | `20` |
 | `REDRA_HOST` | Streamable HTTP bind address | `127.0.0.1` |
 | `REDRA_PORT` / `PORT` | Streamable HTTP port | `8000` |

@@ -98,6 +98,7 @@ def test_streaming_download_enforces_size_limit(
             update_dataset(
                 tmp_path / "settlements.db",
                 "https://settlesignal.com/data/settlements.json",
+                provider="settlesignal",
                 client=client,
             )
     finally:
@@ -225,6 +226,7 @@ def test_imports_content_addressed_publication_and_separates_upcoming(tmp_path):
         assert update_dataset(
             database,
             "https://data.redra.ai/catalog/v1/manifest.json",
+            provider="independent",
             client=client,
         ) == 2
 
@@ -279,6 +281,7 @@ def test_publication_hash_failure_preserves_existing_database(
             update_dataset(
                 database,
                 "https://data.redra.ai/catalog/v1/manifest.json",
+                provider="independent",
                 client=client,
             )
 
@@ -288,3 +291,20 @@ def test_publication_hash_failure_preserves_existing_database(
         assert provider.get("acme-data-breach") is not None
     finally:
         provider.close()
+
+
+def test_dataset_provider_does_not_auto_detect_another_provider(
+    tmp_path, settlesignal_payload
+):
+    with httpx.Client(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=settlesignal_payload)
+        )
+    ) as client:
+        with pytest.raises(DatasetImportError, match="requires a Redra publication"):
+            update_dataset(
+                tmp_path / "settlements.db",
+                "https://data.example/manifest.json",
+                provider="independent",
+                client=client,
+            )

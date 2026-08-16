@@ -3,6 +3,7 @@ services:
     build: .
     environment:
       REDRA_DATABASE_PATH: /data/settlements.db
+      REDRA_DATASET_PROVIDER: settlesignal
       REDRA_HOST: 0.0.0.0
       PORT: 8000
     ports:
@@ -14,6 +15,7 @@ services:
     command: ["dataset", "watch", "--interval-hours", "24"]
     environment:
       REDRA_DATABASE_PATH: /data/settlements.db
+      REDRA_DATASET_PROVIDER: settlesignal
     restart: unless-stopped
     volumes:
       - redra-data:/data

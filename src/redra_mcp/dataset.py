@@ -42,7 +42,7 @@ class DatasetImportError(RuntimeError):
 
 
 def validate_payload(payload: Any) -> dict[str, Any]:
-    """Validate the legacy SettleSignal-compatible single-file feed."""
+    """Validate the explicit SettleSignal provider contract."""
     if not isinstance(payload, dict):
         raise DatasetImportError("SettleSignal payload must be a JSON object")
     settlements = payload.get("settlements")
@@ -63,7 +63,7 @@ def validate_payload(payload: Any) -> dict[str, Any]:
 
 
 def import_payload(payload: Any, database_path: Path) -> int:
-    """Import a legacy single-file feed for backwards compatibility."""
+    """Import the SettleSignal provider into the local snapshot."""
     document = validate_payload(payload)
     today = current_us_date()
     records = [normalize_record(raw, today=today) for raw in document["settlements"]]
@@ -306,6 +306,7 @@ def update_dataset(
     database_path: Path,
     source_url: str,
     *,
+    provider: str,
     timeout: float = 20,
     client: httpx.Client | None = None,
 ) -> int:
@@ -318,16 +319,26 @@ def update_dataset(
     try:
         content = _download(active_client, source_url, maximum=MAX_DATASET_BYTES)
         payload = json.loads(content)
-        if isinstance(payload, dict) and payload.get("schema") == PUBLICATION_SCHEMA:
+        if provider == "independent":
             if len(content) > MAX_MANIFEST_BYTES:
                 raise DatasetImportError("publication manifest exceeds the 1 MiB limit")
+            if not isinstance(payload, dict) or payload.get("schema") != PUBLICATION_SCHEMA:
+                raise DatasetImportError(
+                    "independent provider requires a Redra publication manifest"
+                )
             return _update_publication(
                 database_path,
                 source_url,
                 content,
                 active_client=active_client,
             )
-        return import_payload(payload, database_path)
+        if provider == "settlesignal":
+            if isinstance(payload, dict) and payload.get("schema") == PUBLICATION_SCHEMA:
+                raise DatasetImportError(
+                    "settlesignal provider cannot import a Redra publication manifest"
+                )
+            return import_payload(payload, database_path)
+        raise DatasetImportError(f"unsupported dataset provider: {provider}")
     except (httpx.HTTPError, ValueError, TypeError, sqlite3.Error) as exc:
         if isinstance(exc, DatasetImportError):
             raise
