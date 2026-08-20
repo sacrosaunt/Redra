@@ -95,6 +95,11 @@ def create_mcp(
 
     @server.tool(
         title="Search settlements",
+        description=(
+            "Search one settlement angle using logical AND keywords and structured "
+            "status, type, state, proof, and deadline filters. Status defaults to open. "
+            "Results include source metadata and quality flags."
+        ),
         annotations=read_only_annotations("Search settlements"),
     )
     def search_settlements(
@@ -177,6 +182,12 @@ def create_mcp(
 
     @server.tool(
         title="Search settlements in a batch",
+        description=(
+            "Run up to 50 independent settlement searches and deduplicate records "
+            "across queries. Results include matched_query_indices, and "
+            "executed_query_count reports the number of searches performed. Use when "
+            "several unrelated search angles should be evaluated together."
+        ),
         annotations=read_only_annotations("Search settlements in a batch"),
     )
     def search_settlements_batch(
@@ -216,6 +227,10 @@ def create_mcp(
 
     @server.tool(
         title="Get a settlement",
+        description=(
+            "Return the complete stored record and official source links for one "
+            "settlement ID produced by a search."
+        ),
         annotations=read_only_annotations("Get a settlement"),
     )
     def get_settlement(
@@ -234,6 +249,10 @@ def create_mcp(
 
     @server.tool(
         title="Get settlements",
+        description=(
+            "Return complete stored records and official source links for up to 20 "
+            "settlement IDs produced by search."
+        ),
         annotations=read_only_annotations("Get settlements"),
     )
     def get_settlements(
